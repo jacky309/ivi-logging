@@ -135,15 +135,15 @@ public:
 	template<typename ... Args>
 	void writeFormatted(const char* format, Args ... args) {
 		if (m_enabled) {
-			char b[65536];
+			std::array<char, 65536> buffer;
 
 #pragma GCC diagnostic push
 			// Make sure GCC does not complain about not being able to check the format string since it is no literal string
 #pragma GCC diagnostic ignored "-Wformat-security"
-			snprintf(b, sizeof(b), format, args ...);
+			snprintf(buffer.data(), std::tuple_size_v<decltype(buffer)>, format, args ...);
 #pragma GCC diagnostic pop
 
-			dlt_user_log_write_utf8_string(this, b);
+			dlt_user_log_write_utf8_string(this, buffer.data());
 		}
 	}
 

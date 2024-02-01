@@ -12,10 +12,7 @@ namespace logging {
 
 template<size_t I = 0, typename Func, typename ... TupleTypes, typename ... CallArgumentTypes>
 typename std::enable_if<I == sizeof ... (TupleTypes)>::type
-for_each_in_tuple_(std::tuple<TupleTypes ...>& tpl, Func func, CallArgumentTypes& ... args) {
-	UNUSED(tpl);
-	UNUSED(func);
-	UNUSED(args...);
+for_each_in_tuple_([[maybe_unused]] std::tuple<TupleTypes ...>& tpl, [[maybe_unused]] Func func, [[maybe_unused]] CallArgumentTypes& ... args) {
 }
 
 template<size_t I = 0, typename Func, typename ... TupleTypes, typename ... CallArgumentTypes>
@@ -175,13 +172,6 @@ template<template<class ...> class ContextTypesClass, class ... ContextTypes,
 	 template<class ...> class ContextDataTypesClass, class ... LogDataTypes>
 class LogContextT<ContextTypesClass<ContextTypes ...>, ContextDataTypesClass<LogDataTypes ...> > : public LogContextCommon {
 
-	struct setParentContextFunctor {
-		template<typename T, typename ParentType>
-		void operator()(T && t, ParentType& parent) {
-			t.setParentContext(parent);
-		}
-	};
-
 	struct isEnabledFunctor {
 		isEnabledFunctor(bool& b) : m_isEnabled(b) {
 		}
@@ -238,12 +228,9 @@ public:
 
 		template<size_t I = 0, typename ... CallArgumentTypes>
 		typename std::enable_if<I == sizeof ... (ContextTypes)>::type
-		for_each_init(std::tuple<LogDataTypes ...>& tpl, LogContextT<ContextTypesClass<ContextTypes ...>,
+		for_each_init([[maybe_unused]] std::tuple<LogDataTypes ...>& tpl, [[maybe_unused]] LogContextT<ContextTypesClass<ContextTypes ...>,
 									 ContextDataTypesClass<LogDataTypes ...> >& context,
-			      CallArgumentTypes& ... args) {
-			UNUSED(context);
-			UNUSED(tpl);
-			UNUSED(args ...);
+			      [[maybe_unused]] CallArgumentTypes& ... args) {
 		}
 
 		template<size_t I = 0, typename ... CallArgumentTypes>
@@ -303,7 +290,7 @@ public:
 	};
 
 	LogContextT(const std::string& id, const std::string& contextDescription) : LogContextCommon(id, contextDescription) {
-		for_each_in_tuple_(m_contexts, setParentContextFunctor(), *this);
+		for_each_in_tuple_(m_contexts, [&](auto &&t) { t.setParentContext(*this); });
 	}
 
 	LogData createLog(LogLevel level, const char* fileName, int lineNumber, const char* prettyFunction) {

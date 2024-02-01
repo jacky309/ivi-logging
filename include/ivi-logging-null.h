@@ -14,9 +14,7 @@ class NullLogData : public LogData {
 
 public:
 
-	void init(NullLogContext& context, LogInfo& data) {
-		UNUSED(context);
-		UNUSED(data);
+	void init([[maybe_unused]] NullLogContext& context, [[maybe_unused]] LogInfo& data) {
 	}
 
 	bool isEnabled() const {
@@ -35,12 +33,10 @@ public:
 
 	typedef NullLogData LogDataType;
 
-	void setParentContext(LogContextCommon& context) {
-		UNUSED(context);
+	void setParentContext([[maybe_unused]] LogContextCommon& context) {
 	}
 
-	bool isEnabled(LogLevel logLevel) {
-		UNUSED(logLevel);
+	bool isEnabled([[maybe_unused]] LogLevel logLevel) {
 		return false;
 	}
 
@@ -49,87 +45,71 @@ public:
 
 };
 
-inline NullLogData& operator<<(NullLogData& data, bool v) {
-    UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] bool v) {
     return data;
 }
 
-inline NullLogData& operator<<(NullLogData& data, const char* v) {
-    UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] const char* v) {
     return data;
 }
 
 template<size_t N>
-inline NullLogData& operator<<(NullLogData& data, const char (&v)[N]) {
-   UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] const char (&v)[N]) {
    return data;
 }
 
-inline NullLogData& operator<<(NullLogData& data, const std::string& v) {
-    UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] const std::string& v) {
     return data;
 }
 
-inline NullLogData& operator<<(NullLogData& data, float v) {
-    UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] float v) {
     return data;
 }
 
 
 // TODO : strangely, it seems like none of the types defined in "stdint.h" is equivalent to "long int" on a 32 bits platform
 #if __WORDSIZE == 32
-inline NullLogData& operator<<(NullLogData& data, long int v) {
-    UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] long int v) {
     return data;
 }
-inline NullLogData& operator<<(NullLogData& data, unsigned long int v) {
-    UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] unsigned long int v) {
     return data;
 }
 #endif
 
-inline NullLogData& operator<<(NullLogData& data, double v) {
-    UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] double v) {
     return data;
 }
 
-inline NullLogData& operator<<(NullLogData& data, uint64_t v) {
-    UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] uint64_t v) {
     return data;
 }
 
-inline NullLogData& operator<<(NullLogData& data, int64_t v) {
-    UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] int64_t v) {
     return data;
 }
 
-inline NullLogData& operator<<(NullLogData& data, uint32_t v) {
-    UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] uint32_t v) {
     return data;
 }
 
-inline NullLogData& operator<<(NullLogData& data, int32_t v) {
-    UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] int32_t v) {
     return data;
 }
 
-inline NullLogData& operator<<(NullLogData& data, uint16_t v) {
-    UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] uint16_t v) {
     return data;
 }
 
-inline NullLogData& operator<<(NullLogData& data, int16_t v) {
-    UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] int16_t v) {
     return data;
 }
 
-inline NullLogData& operator<<(NullLogData& data, uint8_t v) {
-    UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] uint8_t v) {
     return data;
 }
 
-inline NullLogData& operator<<(NullLogData& data, int8_t v) {
-    UNUSED(v);
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] int8_t v) {
     return data;
 }
 

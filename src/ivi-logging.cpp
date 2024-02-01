@@ -121,7 +121,7 @@ std::string getProcessName(pid_t pid) {
 
 const char* ThreadInformation::getName() const {
 	std::array<char, 64> buffer;
-	auto ret = pthread_getname_np( pthread_self(), buffer.data(), buffer.size() );
+	auto ret = pthread_getname_np( pthread_self(), buffer.data(), std::tuple_size_v<decltype(buffer)> );
 	if (ret != 0)
 		buffer[0] = 0;
 	m_name = buffer.data();

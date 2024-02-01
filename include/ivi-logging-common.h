@@ -12,14 +12,6 @@
 
 namespace logging {
 
-inline void UNUSED() {
-}
-
-template<typename Type, typename ... Types> void UNUSED(const Type& firstValue, const Types& ... otherValues) {
-	(void) firstValue;
-	UNUSED(otherValues ...);
-}
-
 #define LOGGING_WARNING_OUTPUT_PREFIX "Logging: "
 
 enum class LogLevel {
