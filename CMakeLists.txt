@@ -15,6 +15,8 @@ set(PACKAGE_VERSION ${VERSION})
 
 OPTION( ENABLE_DLT_BACKEND "Include DLT as default logging backend" OFF )
 OPTION( ENABLE_CONSOLE_BACKEND "Include console as default logging backend" ON )
+OPTION( ENABLE_EXAMPLES "Build examples" ON )
+OPTION( ENABLE_TESTS "Build tests" ON )
 
 # Dependencies
 FIND_PACKAGE(PkgConfig REQUIRED)
@@ -94,8 +96,13 @@ endif()
 
 add_subdirectory (src)
 
-add_subdirectory (test)
+if(ENABLE_TESTS)
+	add_subdirectory(test)
+endif()
 
-add_subdirectory (examples)
+if(ENABLE_EXAMPLES)
+	add_subdirectory(examples)
+endif()
+
 add_subdirectory (doc)
 
