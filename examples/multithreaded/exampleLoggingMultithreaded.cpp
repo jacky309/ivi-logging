@@ -12,7 +12,7 @@ static const int DURATION = 1000;
 void loop(const char * threadName) {
 	for(int i = DURATION ; i>0 ; i--) {
         log_debug() << "Hello from " << threadName;
-        sleep(1);
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 }
 

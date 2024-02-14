@@ -15,6 +15,5 @@ int main(int, const char**) {
 
 	log_warn() << "Test from main";
 
-	sleep(1);
-
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 }

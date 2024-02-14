@@ -2,9 +2,11 @@
 #include "stdio.h"
 #include "ivi-logging-console.h"
 #include <string>
+#include <cstring>
 #include <dirent.h>
 #include <sys/ioctl.h>
 #include <pthread.h>
+#include <unistd.h>
 
 namespace logging {
 
@@ -154,6 +156,16 @@ ConsoleLogContext::ConsoleLogContext() {
 			s_defaultLogLevel = LogLevel::None;
 		s_envVarCheckDone = true;
 	}
+}
+
+const char* LogInfo::getFileName() const {
+	if (m_fileName == nullptr) {
+		size_t shortNamePosition = strlen(m_longFileName);
+		while ( (shortNamePosition > 0) && (m_longFileName[shortNamePosition - 1] != '/') )
+			shortNamePosition--;
+		m_fileName = m_longFileName + shortNamePosition;
+	}
+	return m_fileName;
 }
 
 }

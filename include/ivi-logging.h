@@ -4,8 +4,6 @@
 #include <functional>
 #include <sstream>
 
-#include "string.h"
-
 #include "ivi-logging-common.h"
 
 namespace logging {

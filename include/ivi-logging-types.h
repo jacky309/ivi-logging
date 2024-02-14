@@ -4,11 +4,6 @@
 #pragma once
 
 #include "ivi-logging-common.h"
-#include <vector>
-#include <map>
-#include <unordered_map>
-#include <string>
-#include <exception>
 #include <type_traits>
 #include "ivi-logging-stl.h"
 

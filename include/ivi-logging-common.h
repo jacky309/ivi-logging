@@ -1,10 +1,7 @@
 #pragma once
 
-#include <unistd.h>
 #include <string>
-#include <string.h>
 #include <atomic>
-#include <array>
 
 #if __cplusplus < 201103L
 # error ivi-logging requires C++11
@@ -131,15 +128,7 @@ public:
 		return m_level;
 	}
 
-	const char* getFileName() const {
-		if (m_fileName == nullptr) {
-			size_t shortNamePosition = strlen(m_longFileName);
-			while ( (shortNamePosition > 0) && (m_longFileName[shortNamePosition - 1] != '/') )
-				shortNamePosition--;
-			m_fileName = m_longFileName + shortNamePosition;
-		}
-		return m_fileName;
-	}
+	const char* getFileName() const;
 
 	int getLineNumber() const {
 		return m_lineNumber;

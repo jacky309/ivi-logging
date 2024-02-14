@@ -1,7 +1,5 @@
 #pragma once
 
-#include "assert.h"
-
 #include "dlt_user.h"
 
 #include "ivi-logging-common.h"

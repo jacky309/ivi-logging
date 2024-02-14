@@ -2,8 +2,8 @@
 
 #include <vector>
 #include <string>
-#include <string.h>
-#include <assert.h>
+#include <cassert>
+#include <algorithm>
 
 namespace logging {
 
@@ -16,9 +16,6 @@ class ByteArray {
 
 public:
 	ByteArray() {
-#ifndef NDEBUG
-		memset( m_staticData, 0, sizeof(m_staticData) );
-#endif
 	}
 
 	ByteArray(const ByteArray& b) {
@@ -28,7 +25,7 @@ public:
 
 	ByteArray& operator=(const ByteArray& right) {
 		resize( right.size() );
-		memcpy( getData(), right.getData(), right.size() );
+		std::copy_n(right.getData(), right.size(), getData());
 		return *this;
 	}
 
@@ -46,17 +43,11 @@ public:
 	}
 
 	char* getData() {
-		if ( usesStaticBuffer() )
-			return m_staticData;
-		else
-			return &( (*m_dynamicData)[0] );
+		return usesStaticBuffer() ? m_staticData.data() : m_dynamicData->data();
 	}
 
 	const char* getData() const {
-		if ( usesStaticBuffer() )
-			return m_staticData;
-		else
-			return &( (*m_dynamicData)[0] );
+		return usesStaticBuffer() ? m_staticData.data() : m_dynamicData->data();
 	}
 
 	char& operator[](size_t index) {
@@ -74,7 +65,7 @@ public:
 			} else {
 				m_dynamicData = new std::vector<char>();
 				m_dynamicData->resize(size);
-				memcpy(m_dynamicData->data(), m_staticData, m_length);
+				std::copy_n(m_staticData.begin(), m_length, m_dynamicData->data());
 				m_length = -1; // this field is not relevant anymore
 			}
 		}
@@ -83,13 +74,13 @@ public:
 
 	void writeAt(size_t position, const void* rawDataPtr, size_t sizeInByte) {
 		assert(m_length >= position + sizeInByte);
-		memcpy(&(getData()[position]), rawDataPtr, sizeInByte);
+		std::copy_n(reinterpret_cast<const char*>(rawDataPtr), sizeInByte, getData() + position);
 	}
 
 	void append(const void* rawDataPtr, size_t sizeInByte) {
 		auto i = size();
 		resize(size() + sizeInByte);
-		memcpy(getData() + i, rawDataPtr, sizeInByte);
+		std::copy_n(reinterpret_cast<const char*>(rawDataPtr), sizeInByte, getData() + i);
 	}
 
 	void append(unsigned char v) {
@@ -111,7 +102,7 @@ public:
 
 private:
 	std::vector<char>* m_dynamicData = nullptr;
-	char m_staticData[512];
+	std::array<char, 512> m_staticData;
 	size_t m_length = 0;
 };
 

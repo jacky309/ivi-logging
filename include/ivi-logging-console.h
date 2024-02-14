@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ivi-logging-common.h"
-#include "stdio.h"
 #include <mutex>
 #include "ivi-logging-utils.h"
 
