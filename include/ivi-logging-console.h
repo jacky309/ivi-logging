@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ivi-logging-common.h"
-#include <mutex>
 #include "ivi-logging-utils.h"
 
 namespace logging {
@@ -55,19 +54,11 @@ public:
 		return ( level <= getLogLevel() );
 	}
 
-	void write(const char* s, StreamLogData& data) {
-		std::lock_guard<std::mutex> lock(m_outputMutex);
-		auto file = getFile(data);
-		if (file) {
-			fprintf(file, "%s", s);
-			fflush(file);
-		}
-	}
+	void write(const char* s, StreamLogData& data);
 
 	static unsigned int getConsoleWidth();
 
 private:
-	static std::mutex m_outputMutex;
 	LogContextCommon* m_context = nullptr;
 	LogLevel m_level = LogLevel::Debug;
 };

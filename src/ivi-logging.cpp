@@ -7,6 +7,7 @@
 #include <sys/ioctl.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <mutex>
 
 namespace logging {
 
@@ -15,7 +16,7 @@ AppLogContext* s_pAppLogContext = nullptr;
 LogLevel ConsoleLogContext::s_defaultLogLevel = LogLevel::All;
 bool ConsoleLogContext::s_envVarCheckDone = false;
 
-std::mutex StreamLogContextAbstract::m_outputMutex;
+std::mutex streamLogContextAbstractOutputMutex;
 
 std::atomic_int ThreadInformation::sNextID = ATOMIC_VAR_INIT(0);
 
@@ -166,6 +167,15 @@ const char* LogInfo::getFileName() const {
 		m_fileName = m_longFileName + shortNamePosition;
 	}
 	return m_fileName;
+}
+
+void StreamLogContextAbstract::write(const char* s, StreamLogData& data) {
+	std::lock_guard<std::mutex> lock(streamLogContextAbstractOutputMutex);
+	auto file = getFile(data);
+	if (file) {
+		fprintf(file, "%s", s);
+		fflush(file);
+	}
 }
 
 }
