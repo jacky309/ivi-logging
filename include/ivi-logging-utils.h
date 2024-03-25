@@ -4,6 +4,7 @@
 #include <string>
 #include <cassert>
 #include <algorithm>
+#include <array>
 
 namespace logging {
 
