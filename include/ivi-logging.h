@@ -125,8 +125,8 @@ private:
 /**
  * Set the given context as default for the current scope
  */
-#define LOG_SET_DEFAULT_CONTEXT(context) static std::function<LogContext& ()> getDefaultContext = \
-	[] ()->LogContext & {return context; }
+#define LOG_SET_DEFAULT_CONTEXT(context) static auto getDefaultContext = \
+	[] ()->auto & {return context; }
 
 /**
  * Import the given context and set it as default for the current scope
@@ -138,13 +138,13 @@ private:
 /**
  * Set the given context as default for the current class
  */
-#define LOG_SET_CLASS_CONTEXT(context) static inline LogContext &getDefaultContext() { return context; }
+#define LOG_SET_CLASS_CONTEXT(context) static inline auto &getDefaultContext() { return context; }
 
 /**
  *
  */
 #define LOG_DECLARE_DEFAULT_LOCAL_CONTEXT(contextShortID, contextDescription) \
-	std::function<LogContext& ()> getDefaultContext = [] ()->LogContext & {	 \
+	auto getDefaultContext = [] ()->LogContext & {	 \
 		static LogContext __defaultContext(contextShortID, contextDescription);	\
 		return __defaultContext; \
 	}
@@ -153,7 +153,7 @@ private:
  * Set a new context as default context for a class. To be used inside the class definition.
  */
 #define LOG_DECLARE_CLASS_CONTEXT(contextShortID, contextDescription) \
-	static LogContext &getDefaultContext() { \
+	static auto &getDefaultContext() { \
 		static LogContext __defaultLogContext(contextShortID, contextDescription); \
 		return __defaultLogContext; \
 	}
