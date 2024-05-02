@@ -152,7 +152,7 @@ class LogData {
 /// Deprecated : use LogData
 __attribute__ ((deprecated)) typedef LogData LogDataCommon;
 
-std::string getStackTrace(unsigned int max_frames = 63);
+std::string getStackTrace(size_t max_frames = 63);
 
 /*
 /// TODO : check if that template method is really inlined by GCC
