@@ -46,6 +46,12 @@ public:
 
 };
 
+
+template<typename Type>
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] const Type* v) {
+	return data;
+}
+
 inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] bool v) {
     return data;
 }
@@ -63,15 +69,7 @@ inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] const std::st
     return data;
 }
 
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] float v) {
-    return data;
-}
-
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] double v) {
-    return data;
-}
-
-template<typename T, typename = typename std::enable_if<std::is_integral_v<T>>::type>
+template<typename T, typename = typename std::enable_if<std::is_fundamental_v<T>>::type>
 inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] const T& v) {
     return data;
 }

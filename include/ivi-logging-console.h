@@ -294,6 +294,13 @@ inline StreamLogData& operator<<(StreamLogData& data, unsigned long v) {
 	return data;
 }
 
+template<typename Type>
+inline StreamLogData& operator<<(StreamLogData& data, const Type* v) {
+	if ( data.isEnabled() )
+		data.writeFormatted("%s", pointerToString(v).c_str());
+	return data;
+}
+
 inline StreamLogData& operator<<(StreamLogData& data, const char* v) {
 	if ( data.isEnabled() )
 		data.writeFormatted("%s", v ? v : "null");

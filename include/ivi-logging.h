@@ -22,7 +22,7 @@ for_each_in_tuple_(std::tuple<TupleTypes ...>& tpl, Func func, CallArgumentTypes
 
 
 inline std::string pointerToString(const void* p) {
-	char buffer[32];
+	char buffer[64];
 	snprintf(buffer, sizeof(buffer), "0x%zX", (size_t) p);
 	return buffer;
 }
