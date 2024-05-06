@@ -117,6 +117,9 @@ private:
 class LogInfo {
 
 public:
+	LogInfo() {
+	}
+
 	LogInfo(LogLevel level, const char* fileName, int lineNumber, const char* prettyFunction) {
 		m_level = level;
 		m_longFileName = fileName;

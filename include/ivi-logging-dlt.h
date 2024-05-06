@@ -97,10 +97,10 @@ public:
 	DltLogData() {
 	}
 
-	void init(DltContextClass& context, LogInfo& data) {
-		m_data = &data;
+	void init(DltContextClass& context, const LogInfo& data) {
+		m_data = data;
 		m_context = &context;
-		auto dltLogLevel = m_context->getDLTLogLevel( m_data->getLogLevel() );
+		auto dltLogLevel = m_context->getDLTLogLevel( getData().getLogLevel() );
 		m_enabled = (dlt_user_log_write_start(m_context, this, dltLogLevel) > 0);
 	}
 
@@ -108,12 +108,10 @@ public:
 		if (isEnabled()) {
 			if (m_context->isSourceCodeLocationInfoEnabled()) {
 				dlt_user_log_write_utf8_string(this, "                                                    | ");
-				if (m_data->getFileName() != nullptr) dlt_user_log_write_utf8_string( this, m_data->getFileName() );
-				if (m_data->getLineNumber() != -1) dlt_user_log_write_uint32( this, m_data->getLineNumber() );
-				if (m_data->getPrettyFunction() != nullptr) dlt_user_log_write_utf8_string(
-						this,
-						m_data->
-						getPrettyFunction() );
+				if (getData().getFileName() != nullptr) dlt_user_log_write_utf8_string( this, getData().getFileName() );
+				if (getData().getLineNumber() != -1) dlt_user_log_write_uint32( this, getData().getLineNumber() );
+				if (getData().getPrettyFunction() != nullptr) dlt_user_log_write_utf8_string(
+						this, getData().getPrettyFunction() );
 			}
 
 			if (m_context->isThreadInfoEnabled()) {
@@ -124,6 +122,10 @@ public:
 
 			dlt_user_log_write_finish(this);
 		}
+	}
+
+	const LogInfo& getData() const {
+		return m_data;
 	}
 
 	bool isEnabled() const {
@@ -147,7 +149,7 @@ public:
 
 private:
 	DltContextClass* m_context = nullptr;
-	LogInfo* m_data = nullptr;
+	LogInfo m_data;
 	bool m_enabled = false;
 
 };

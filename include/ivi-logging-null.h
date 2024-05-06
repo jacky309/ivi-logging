@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ivi-logging-common.h"
+#include <type_traits>
 
 namespace logging {
 
@@ -66,52 +67,13 @@ inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] float v) {
     return data;
 }
 
-
-// TODO : strangely, it seems like none of the types defined in "stdint.h" is equivalent to "long int" on a 32 bits platform
-#if __WORDSIZE == 32
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] long int v) {
-    return data;
-}
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] unsigned long int v) {
-    return data;
-}
-#endif
-
 inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] double v) {
     return data;
 }
 
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] uint64_t v) {
-    return data;
-}
-
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] int64_t v) {
-    return data;
-}
-
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] uint32_t v) {
-    return data;
-}
-
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] int32_t v) {
-    return data;
-}
-
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] uint16_t v) {
-    return data;
-}
-
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] int16_t v) {
-    return data;
-}
-
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] uint8_t v) {
-    return data;
-}
-
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] int8_t v) {
+template<typename T, typename = typename std::enable_if<std::is_integral_v<T>>::type>
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] const T& v) {
     return data;
 }
 
 }
-

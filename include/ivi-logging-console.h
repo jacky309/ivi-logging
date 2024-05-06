@@ -142,7 +142,7 @@ public:
 
 	void init(StreamLogContextAbstract& aContext, LogInfo& data) {
 		m_context = &aContext;
-		m_data = &data;
+		m_data = data;
 
 		if ( isEnabled() )
 			writePrefix();
@@ -150,7 +150,7 @@ public:
 	}
 
 	virtual void writePrefix() {
-		writeFormatted( m_prefixFormat, getContext()->getShortID(), getLogLevelString( m_data->getLogLevel() ) );
+		writeFormatted( m_prefixFormat, getContext()->getShortID(), getLogLevelString( getData().getLogLevel() ) );
 	}
 
 	virtual void writeSuffix() {
@@ -161,7 +161,7 @@ public:
 		ByteArray array;
 
 		// we ignore the env variable since we always want source code information in the console
-		writeFormatted( array, m_suffixFormat, m_data->getFileName(), m_data->getPrettyFunction(), m_data->getLineNumber());
+		writeFormatted( array, m_suffixFormat, getData().getFileName(), getData().getPrettyFunction(), getData().getLineNumber());
 
 		if (m_context->isThreadInfoEnabled()) {
 			writeFormatted( array, m_suffixThreadNameFormat, getThreadInformation().getID(), getThreadInformation().getName());
@@ -188,11 +188,11 @@ public:
 	}
 
 	bool isEnabled() {
-		return ( m_context->isEnabled( m_data->getLogLevel() ) );
+		return ( m_context->isEnabled( getData().getLogLevel() ) );
 	}
 
-	LogInfo& getData() {
-		return *m_data;
+	const LogInfo& getData() const {
+		return m_data;
 	}
 
 	template<typename ... Args>
@@ -222,7 +222,7 @@ public:
 protected:
 	ContextType* m_context = nullptr;
 	ByteArray m_content;
-	LogInfo* m_data = nullptr;
+	LogInfo m_data;
 
 	const char* m_prefixFormat = DEFAULT_PREFIX;
 	//	const char* m_suffixFormat = DEFAULT_SUFFIX_WITHOUT_FILE_LOCATION;
@@ -389,7 +389,7 @@ public:
             return;
 
         std::string s = ANSI_COLOR_OFF;
-        switch (m_data->getLogLevel()) {
+        switch (getData().getLogLevel()) {
         case LogLevel::Warning : s = ANSI_COLOR_MAGENTA ; break;
         case LogLevel::Error :
         case LogLevel::Fatal: s = ANSI_COLOR_RED; s += ANSI_COLOR_BRIGHT;break;
