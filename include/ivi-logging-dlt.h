@@ -181,6 +181,12 @@ inline DltLogData& operator<<(DltLogData& data, const char (&v)[N]) {
    return data;
 }
 
+inline DltLogData& operator<<(DltLogData& data, std::string_view v) {
+	if ( data.isEnabled() )
+		data.writeFormatted("%.*s", static_cast<int>(v.length()), v.data());
+	return data;
+}
+
 inline DltLogData& operator<<(DltLogData& data, const std::string& v) {
 	data << v.c_str();
 	return data;

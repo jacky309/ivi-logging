@@ -95,6 +95,8 @@ int main(int, const char**) {
 	log_warn() << 5.7;
 	log_warn() << "Test string";
 
+	log_error() << std::string_view{"This is a string used via a string_view. XXXXX. This content should not be visible"}.substr(0, 41);
+
 	myFunction();
 
 	myFunction2();

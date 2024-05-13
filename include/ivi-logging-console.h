@@ -239,6 +239,11 @@ inline FILE* ConsoleLogContext::getFile(StreamLogData& data) {
 		return stdout;
 }
 
+inline StreamLogData& operator<<(StreamLogData& data, std::string_view v) {
+	if ( data.isEnabled() )
+		data.writeFormatted("%.*s", static_cast<int>(v.length()), v.data());
+	return data;
+}
 
 inline StreamLogData& operator<<(StreamLogData& data, bool v) {
 	if ( data.isEnabled() )
