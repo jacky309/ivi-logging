@@ -7,8 +7,7 @@ add_library( ${LIB_NAME} SHARED
 set_target_properties(${LIB_NAME} PROPERTIES VERSION ${VERSION} SOVERSION ${PROJECT_MAJOR_VERSION})
 
 target_link_libraries( ${LIB_NAME}
-   ${DLT_LIBRARIES}
-   ${CPP_LIBS}
+   ivi-logging-dependencies
    pthread
 )
 

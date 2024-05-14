@@ -1,5 +1,0 @@
-FIND_PACKAGE(PkgConfig REQUIRED)
-pkg_check_modules(IVILOGGING REQUIRED ivi-logging)
-add_definitions(${IVILOGGING_CFLAGS_OTHER})
-include_directories(${IVILOGGING_INCLUDE_DIRS})
-link_directories(${IVILOGGING_LIBRARY_DIRS})

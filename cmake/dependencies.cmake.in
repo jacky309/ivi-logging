@@ -1,0 +1,10 @@
+find_package(PkgConfig REQUIRED)
+
+add_library(ivi-logging-dependencies INTERFACE IMPORTED)
+
+foreach(DEPENDENCY @ADDITIONAL_PKGCONFIG_DEPENDENCIES@)
+    pkg_check_modules(${DEPENDENCY} REQUIRED IMPORTED_TARGET ${DEPENDENCY})
+    target_link_libraries(ivi-logging-dependencies INTERFACE PkgConfig::${DEPENDENCY})
+    message("Added dependency ${DEPENDENCY}")
+endforeach()
+

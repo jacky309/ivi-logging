@@ -19,17 +19,11 @@ OPTION( ENABLE_EXAMPLES "Build examples" ON )
 OPTION( ENABLE_TESTS "Build tests" ON )
 
 # Dependencies
-FIND_PACKAGE(PkgConfig REQUIRED)
 if (ENABLE_DLT_BACKEND)
-	pkg_check_modules(DLT REQUIRED automotive-dlt)
-	add_definitions(${DLT_CFLAGS_OTHER})
-	include_directories(${DLT_INCLUDE_DIRS})
-	link_directories(${DLT_LIBRARY_DIRS})
-
 	set(ADDITIONAL_PKGCONFIG_DEPENDENCIES automotive-dlt)
 	set(BACKEND_DEFINES "#define IVI_LOGGING_DLT_AVAILABLE")
-
     list(APPEND BACKEND_CLASSES DltContextClass)
+    set(DLT_FOUND ON)
 endif()
 
 foreach(CLASS ${BACKEND_CLASSES})
@@ -51,11 +45,10 @@ endforeach()
 string(JOIN ", " LOG_CONTEXTS ${BACKEND_CLASSES})
 string(JOIN ", " LOG_CONTEXTS_LOG_DATA_TYPES ${BACKEND_DATA_TYPE_CLASSES})
 
-if (CMAKE_VERSION VERSION_GREATER 3.1)
-	set(CMAKE_CXX_STANDARD 17)
-else()
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-endif()
+configure_file(cmake/dependencies.cmake.in dependencies.cmake @ONLY)
+include(${CMAKE_CURRENT_BINARY_DIR}/dependencies.cmake)
+
+set(CMAKE_CXX_STANDARD 17)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Wno-variadic-macros -Wno-vla-extension -Wno-gnu-zero-variadic-macro-arguments")
 
@@ -63,7 +56,6 @@ configure_file(include/ivi-logging-config.h.in ivi-logging-config.h @ONLY)
 
 set(LIB_NAME ${PACKAGE})
 
-install(FILES IVILoggingConfig.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/IVILogging)
 
 configure_file(ivi-logging.pc.in ivi-logging.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ivi-logging.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
@@ -74,7 +66,6 @@ configure_file(ivi-logging.pc.in ivi-logging-uninstalled.pc)
 if(INSTALL_PKGCONFIG_UNINSTALLED_FILE)
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ivi-logging-uninstalled.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 endif()
-
 
 add_subdirectory (src)
 
@@ -98,6 +89,7 @@ install(EXPORT ${PROJECT_NAME}Targets
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/Config.cmake.in "
     @PACKAGE_INIT@
+    include ( \"\${CMAKE_CURRENT_LIST_DIR}/dependencies.cmake\" )
     include ( \"\${CMAKE_CURRENT_LIST_DIR}/${PROJECT_NAME}Targets.cmake\" )
 ")
 
@@ -107,8 +99,11 @@ configure_package_config_file(${CMAKE_CURRENT_BINARY_DIR}/Config.cmake.in
     NO_SET_AND_CHECK_MACRO
     NO_CHECK_REQUIRED_COMPONENTS_MACRO
 )
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cmake_export/${PROJECT_NAME}Config.cmake
-        DESTINATION lib/cmake/${PROJECT_NAME}
+install(
+    FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/cmake_export/${PROJECT_NAME}Config.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/dependencies.cmake
+    DESTINATION lib/cmake/${PROJECT_NAME}
 )
 
 # Generate and install the files needed to import the package via "find_package(XXXX)" from its build folder
@@ -116,5 +111,6 @@ set(BUILD_FOLDER_IMPORT_PATH ${CMAKE_CURRENT_BINARY_DIR})
 export(EXPORT ${PROJECT_NAME}Targets FILE "${BUILD_FOLDER_IMPORT_PATH}/${PROJECT_NAME}Targets.cmake")
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake "
+    include ( \"\${CMAKE_CURRENT_LIST_DIR}/dependencies.cmake\" )
     include(\"${BUILD_FOLDER_IMPORT_PATH}/${PROJECT_NAME}Targets.cmake\")
 ")
