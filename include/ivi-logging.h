@@ -101,14 +101,14 @@ private:
  * Defines the identifiers of an application. This macro should be used at one place in every application.
  */
 #define LOG_DEFINE_APP_IDS(appID, appDescription) \
-	logging::AppLogContext s_appLogContext(appID, appDescription)
+	logging::AppLogContext s_appLogContext{appID, appDescription}
 
 /**
  * Create a LogContext with the given ID (4 characters in case of DLT support) and description
  */
-#define LOG_DECLARE_CONTEXT(contextName, contextShortID, contextDescription) LogContext contextName( \
+#define LOG_DECLARE_CONTEXT(contextName, contextShortID, contextDescription) LogContext contextName{ \
 		contextShortID,	\
-		contextDescription)
+		contextDescription}
 
 /**
  * Create a new context and define is as default context for the current scope
@@ -125,7 +125,7 @@ private:
 /**
  * Set the given context as default for the current scope
  */
-#define LOG_SET_DEFAULT_CONTEXT(context) static auto getDefaultContext = \
+#define LOG_SET_DEFAULT_CONTEXT(context) static constexpr auto getDefaultContext = \
 	[] ()->auto & {return context; }
 
 /**
@@ -138,13 +138,13 @@ private:
 /**
  * Set the given context as default for the current class
  */
-#define LOG_SET_CLASS_CONTEXT(context) static inline auto &getDefaultContext() { return context; }
+#define LOG_SET_CLASS_CONTEXT(context) static constexpr inline auto &getDefaultContext() { return context; }
 
 /**
  *
  */
 #define LOG_DECLARE_DEFAULT_LOCAL_CONTEXT(contextShortID, contextDescription) \
-	auto getDefaultContext = [] ()->LogContext & {	 \
+	static constexpr auto getDefaultContext = [] ()->auto & {	 \
 		static LogContext __defaultContext(contextShortID, contextDescription);	\
 		return __defaultContext; \
 	}
