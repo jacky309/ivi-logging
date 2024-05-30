@@ -71,11 +71,32 @@ struct SecondClassWithImportedContext {
 
 void myFunction() {
 
+	log_debug() << static_cast<int8_t>(255);
+	log_debug() << static_cast<uint8_t>(255);
+
 	// Redefines the context to use for this scope (this function)
 	LOG_DECLARE_DEFAULT_LOCAL_CONTEXT("CXT3", "Function-specific logging context");
 
 	log_info() << "myFunction log 1";
 	log_warn() << "myFunction log 2";
+
+	std::array<uint8_t , 3> myArray {1,2,3};
+	std::span sp {myArray};
+	log_debug() << "array: " << sp;
+	log_debug() << "span: " << myArray;
+
+	std::map<uint8_t , std::string> myMap {{1,"aa"}, {3,"bb"}};
+	log_debug() << "map: " << myMap;
+
+	int i = 555;
+	log_debug() << std::hex << i << std::dec << " / " << i;
+	log_debug() << i << std::endl;
+
+	log_with_context(getDefaultContext(), logging::LogLevel::Info)<< std::hex << i << std::endl;
+
+	size_t dd = 0x123456789986754;
+	log_info() << dd;
+	log_info() << std::hex << dd;
 
 }
 

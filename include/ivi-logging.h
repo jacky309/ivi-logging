@@ -283,6 +283,10 @@ public:
 			return *this;
 		}
 
+		void setHexEnabled(bool enabled) {
+			for_each_in_tuple_(m_contexts, [&](auto & d) { d.setHexEnabled(enabled);});
+		}
+
 		std::tuple<LogDataTypes ...> m_contexts;
 		LogContextT<ContextTypesClass<ContextTypes ...>, ContextDataTypesClass<LogDataTypes ...> >& m_context;
 	};

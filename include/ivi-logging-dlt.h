@@ -147,11 +147,19 @@ public:
 		}
 	}
 
+	void setHexEnabled(bool enabled) {
+		m_hexEnabled = enabled;
+	}
+
+	bool isHexEnabled() const {
+		return m_hexEnabled;
+	}
+
 private:
 	DltContextClass* m_context = nullptr;
 	LogInfo m_data;
 	bool m_enabled = false;
-
+	bool m_hexEnabled{false};
 };
 
 inline bool DltContextClass::isEnabled(LogLevel logLevel) const {
@@ -218,7 +226,11 @@ inline DltLogData& operator<<(DltLogData& data, double f) {
 }
 
 inline DltLogData& operator<<(DltLogData& data, uint64_t v) {
-	dlt_user_log_write_uint64(&data, v);
+	if (data.isHexEnabled()) {
+    	dlt_user_log_write_uint64_formatted(&data, v, DLT_FORMAT_HEX64);
+	} else {
+		dlt_user_log_write_uint64(&data, v);
+	}
 	return data;
 }
 
@@ -228,7 +240,11 @@ inline DltLogData& operator<<(DltLogData& data, int64_t v) {
 }
 
 inline DltLogData& operator<<(DltLogData& data, uint32_t v) {
-	dlt_user_log_write_uint32(&data, v);
+	if (data.isHexEnabled()) {
+    	dlt_user_log_write_uint32_formatted(&data, v, DLT_FORMAT_HEX32);
+	} else {
+		dlt_user_log_write_uint32(&data, v);
+	}
 	return data;
 }
 
@@ -238,7 +254,11 @@ inline DltLogData& operator<<(DltLogData& data, int32_t v) {
 }
 
 inline DltLogData& operator<<(DltLogData& data, uint16_t v) {
-	dlt_user_log_write_uint16(&data, v);
+	if (data.isHexEnabled()) {
+    	dlt_user_log_write_uint16_formatted(&data, v, DLT_FORMAT_HEX16);
+	} else {
+		dlt_user_log_write_uint16(&data, v);
+	}
 	return data;
 }
 
@@ -248,7 +268,11 @@ inline DltLogData& operator<<(DltLogData& data, int16_t v) {
 }
 
 inline DltLogData& operator<<(DltLogData& data, uint8_t v) {
-	dlt_user_log_write_uint8(&data, v);
+	if (data.isHexEnabled()) {
+    	dlt_user_log_write_uint8_formatted(&data, v, DLT_FORMAT_HEX8);
+	} else {
+		dlt_user_log_write_uint8(&data, v);
+	}
 	return data;
 }
 

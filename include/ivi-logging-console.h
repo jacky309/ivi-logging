@@ -115,9 +115,6 @@ public:
 
 	typedef StreamLogContextAbstract ContextType;
 
-	StreamLogData() {
-	}
-
 	virtual ~StreamLogData() {
 	}
 
@@ -196,10 +193,19 @@ public:
 	}
 
 	template<typename ... Args>
-	void writeFormatted(const char* format, Args ... args) {
+	StreamLogData& writeFormatted(const char* format, Args ... args) {
 		if ( isEnabled() ) {
 			writeFormatted(m_content, format, args ...);
 		}
+		return *this;
+	}
+
+	StreamLogData& writeInt(int value) {
+		return writeFormatted(m_hexEnabled ? "%X" : "%d", value);
+	}
+
+	StreamLogData& writeInt(unsigned int value) {
+		return writeFormatted(m_hexEnabled ? "%X" : "%u", value);
 	}
 
 	template<typename ... Args>
@@ -219,10 +225,19 @@ public:
 #pragma GCC diagnostic pop
 	}
 
+	void setHexEnabled(bool enabled) {
+		m_hexEnabled = enabled;
+	}
+
+	bool isHexEnabled() const {
+		return m_hexEnabled;
+	}
+
 protected:
 	ContextType* m_context = nullptr;
 	ByteArray m_content;
 	LogInfo m_data;
+	bool m_hexEnabled {false};
 
 	const char* m_prefixFormat = DEFAULT_PREFIX;
 	//	const char* m_suffixFormat = DEFAULT_SUFFIX_WITHOUT_FILE_LOCATION;
@@ -240,76 +255,52 @@ inline FILE* ConsoleLogContext::getFile(StreamLogData& data) {
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, std::string_view v) {
-	if ( data.isEnabled() )
-		data.writeFormatted("%.*s", static_cast<int>(v.length()), v.data());
-	return data;
+	return data.writeFormatted("%.*s", static_cast<int>(v.length()), v.data());
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, bool v) {
-	if ( data.isEnabled() )
-		data.writeFormatted("%s", v ? "true" : "false");
-	return data;
+	return data.writeFormatted("%s", v ? "true" : "false");
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, char v) {
-	if ( data.isEnabled() )
-		data.writeFormatted("%d", v);
-	return data;
+	return data.writeInt(v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, unsigned char v) {
-	if ( data.isEnabled() )
-		data.writeFormatted("%u", v);
-	return data;
+	return data.writeInt(v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, signed short v) {
-	if ( data.isEnabled() )
-		data.writeFormatted("%d", v);
-	return data;
+	return data.writeInt(v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, unsigned short v) {
-	if ( data.isEnabled() )
-		data.writeFormatted("%u", v);
-	return data;
+	return data.writeInt(v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, signed int v) {
-	if ( data.isEnabled() )
-		data.writeFormatted("%d", v);
-	return data;
+	return data.writeInt(v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, unsigned int v) {
-	if ( data.isEnabled() )
-		data.writeFormatted("%u", v);
-	return data;
+	return data.writeInt(v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, signed long v) {
-	if ( data.isEnabled() )
-		data.writeFormatted("%ld", v);
-	return data;
+	return data.writeFormatted(data.isHexEnabled() ? "%lX" : "%ld", v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, unsigned long v) {
-	if ( data.isEnabled() )
-		data.writeFormatted("%lu", v);
-	return data;
+	return data.writeFormatted(data.isHexEnabled() ? "%lX" : "%lu", v);
 }
 
 template<typename Type>
 inline StreamLogData& operator<<(StreamLogData& data, const Type* v) {
-	if ( data.isEnabled() )
-		data.writeFormatted("%s", pointerToString(v).c_str());
-	return data;
+	return data.writeFormatted("%s", pointerToString(v).c_str());
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, const char* v) {
-	if ( data.isEnabled() )
-		data.writeFormatted("%s", v ? v : "null");
-	return data;
+	return data.writeFormatted("%s", v ? v : "null");
 }
 
 template<size_t N>
@@ -319,21 +310,15 @@ inline StreamLogData& operator<<(StreamLogData& data, const char (&v)[N]) {
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, float v) {
-	if ( data.isEnabled() )
-		data.writeFormatted("%f", v);
-	return data;
+	return data.writeFormatted("%f", v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, const std::string& s) {
-	if ( data.isEnabled() )
-		data.writeFormatted("%s", s.c_str());
-	return data;
+	return data.writeFormatted("%s", s.c_str());
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, double v) {
-	if ( data.isEnabled() )
-		data.writeFormatted("%f", v);
-	return data;
+	return data.writeFormatted("%f", v);
 }
 
 class ConsoleLogData : public StreamLogData {
