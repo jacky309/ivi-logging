@@ -2,6 +2,8 @@
 
 #include <string>
 #include <atomic>
+#include <cassert>
+#include <iostream>
 
 #if __cplusplus < 201103L
 # error ivi-logging requires C++11
@@ -11,7 +13,7 @@ namespace logging {
 
 #define LOGGING_WARNING_OUTPUT_PREFIX "Logging: "
 
-enum class LogLevel {
+enum class LogLevel : uint8_t {
 	None, Fatal, Error, Warning, Info, Debug, Verbose, All, Invalid
 };
 
@@ -125,6 +127,13 @@ public:
 		m_longFileName = fileName;
 		m_lineNumber = lineNumber;
 		m_prettyFunction = prettyFunction;
+	}
+
+	~LogInfo() {
+		if (m_level == LogLevel::Fatal) {
+			std::cerr << "Exiting process due to fatal log\n";
+			abort();
+		}
 	}
 
 	LogLevel getLogLevel() const {

@@ -143,8 +143,6 @@ int main(int, const char**) {
 
 	MyNamespace::MyFunction();
 
-	log_fatal() << "A fatal log";
-
 	std::vector<MyClass*> vectorOfPointers;
 	vectorOfPointers.push_back(new MyClass());
 	vectorOfPointers.push_back(new MyClass());

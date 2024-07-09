@@ -195,17 +195,6 @@ class LogContextT<ContextTypesClass<ContextTypes ...>, ContextDataTypesClass<Log
 		}
 	};
 
-	struct initDataFunctor {
-		template<typename T>
-		void operator()(T && t,
-				LogContextT<ContextTypesClass<ContextTypes ...>,
-					    ContextDataTypesClass<LogDataTypes ...> >& context,
-						LogInfo& log) {
-			if (t.isEnabled())  // We need to check each context here to ensure that we don't send data to a disabled context
-				t.init(context, log);
-		}
-	};
-
 	struct streamFunctor {
 		template<typename T, typename Type>
 		void operator()(T && t, const Type& v) {
