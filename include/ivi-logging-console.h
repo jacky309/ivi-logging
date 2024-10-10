@@ -286,6 +286,14 @@ inline StreamLogData& operator<<(StreamLogData& data, unsigned int v) {
 	return data.writeInt(v);
 }
 
+inline StreamLogData& operator<<(StreamLogData& data, long long v) {
+	return data.writeFormatted(data.isHexEnabled() ? "%llX" : "%lld", v);
+}
+
+inline StreamLogData& operator<<(StreamLogData& data, unsigned long long v) {
+	return data.writeFormatted(data.isHexEnabled() ? "%llX" : "%llu", v);
+}
+
 inline StreamLogData& operator<<(StreamLogData& data, signed long v) {
 	return data.writeFormatted(data.isHexEnabled() ? "%lX" : "%ld", v);
 }
