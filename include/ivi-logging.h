@@ -69,22 +69,22 @@ private:
 /**
  * Generate a log with "fatal" severity
  */
-#define log_fatal() log_with_context(getDefaultContext(), logging::LogLevel::Fatal)
+#define log_fatal() log_fatal_with_context(getDefaultContext())
 
 /**
  * Generate a log with "error" severity
  */
-#define log_error() log_with_context(getDefaultContext(), logging::LogLevel::Error)
+#define log_error() log_error_with_context(getDefaultContext())
 
 /**
  * Generate a log with "verbose" severity
  */
-#define log_verbose() log_with_context(getDefaultContext(), logging::LogLevel::Verbose)
+#define log_verbose() log_verbose_with_context(getDefaultContext())
 
 /**
  * Generate a log with "info" severity
  */
-#define log_info() log_with_context(getDefaultContext(), logging::LogLevel::Info)
+#define log_info() log_info_with_context(getDefaultContext())
 
 /**
  * Generate a log with "warning" severity
@@ -96,6 +96,38 @@ private:
  * Generate a log with "debug" severity
  */
 #define log_debug() log_with_context(getDefaultContext(), logging::LogLevel::Debug)
+
+/**
+ * Generate a log with "fatal" severity
+ */
+#define log_fatal_with_context(context) log_with_context(context, logging::LogLevel::Fatal)
+
+/**
+ * Generate a log with "error" severity
+ */
+#define log_error_with_context(context) log_with_context(context, logging::LogLevel::Error)
+
+/**
+ * Generate a log with "verbose" severity
+ */
+#define log_verbose_with_context(context) log_with_context(context, logging::LogLevel::Verbose)
+
+/**
+ * Generate a log with "info" severity
+ */
+#define log_info_with_context(context) log_with_context(context, logging::LogLevel::Info)
+
+/**
+ * Generate a log with "warning" severity
+ */
+#define log_warn_with_context(context) log_with_context(context, logging::LogLevel::Warning)
+
+/**
+ * Generate a log with "debug" severity
+ */
+#define log_debug_with_context(context) log_with_context(context, logging::LogLevel::Debug)
+
+
 
 /**
  * Defines the identifiers of an application. This macro should be used at one place in every application.
