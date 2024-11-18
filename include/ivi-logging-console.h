@@ -101,11 +101,12 @@ private:
 	bool m_colorSupport;
 };
 
+void getCurrentTime(unsigned int& seconds, unsigned int& milliseconds);
 
 class StreamLogData : public LogData {
 
 public:
-	static constexpr const char* DEFAULT_PREFIX = "%4.4s [%s] ";
+	static constexpr const char* DEFAULT_PREFIX = "%05d.%03d | %4.4s [%s] "; // with timestamp
 
 	static constexpr const char* DEFAULT_SUFFIX_WITH_FILE_LOCATION = " [ %.2i | %s / %s - %d ]";
 	static constexpr const char* DEFAULT_SUFFIX_WITH_SHORT_FILE_LOCATION_WITHOUT_FUNCTION = " | %s%.0s:%d ";
@@ -147,7 +148,9 @@ public:
 	}
 
 	virtual void writePrefix() {
-		writeFormatted( m_prefixFormat, getContext()->getShortID(), getLogLevelString( getData().getLogLevel() ) );
+		unsigned int seconds, milliseconds;
+		getCurrentTime(seconds, milliseconds);
+		writeFormatted( m_prefixFormat, seconds, milliseconds, getContext()->getShortID(), getLogLevelString( getData().getLogLevel() ) );
 	}
 
 	virtual void writeSuffix() {

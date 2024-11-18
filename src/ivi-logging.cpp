@@ -8,6 +8,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <mutex>
+#include <chrono>
 
 namespace logging {
 
@@ -176,6 +177,14 @@ void StreamLogContextAbstract::write(const char* s, StreamLogData& data) {
 		fprintf(file, "%s", s);
 		fflush(file);
 	}
+}
+
+static auto loggingStartTime {std::chrono::system_clock::now()};
+
+void getCurrentTime(unsigned int& seconds, unsigned int& milliseconds) {
+	auto elapsedTime = std::chrono::system_clock::now() - loggingStartTime;
+	seconds = std::chrono::duration_cast<std::chrono::seconds>(elapsedTime).count();
+	milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedTime - std::chrono::seconds{seconds}).count();
 }
 
 }
