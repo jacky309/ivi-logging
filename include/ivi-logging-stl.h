@@ -47,9 +47,8 @@ LogDataType& streamArrayType(LogDataType& log, const ArrayType& v) {
 	return log;
 }
 
-template<typename ElementType, class LogDataType = logging::LogData, typename =
-		 typename std::enable_if<std::is_base_of<logging::LogData, LogDataType>::value>::type>
-LogDataType& operator<<(LogDataType& log, const std::vector<ElementType>& v) {
+template<typename ElementType, class LogDataType>
+std::enable_if_t<std::is_base_of_v<logging::LogData, LogDataType>, LogDataType&> operator<<(LogDataType& log, const std::vector<ElementType>& v) {
 	return streamArrayType(log, v);
 }
 
