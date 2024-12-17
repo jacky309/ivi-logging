@@ -19,154 +19,152 @@ namespace MyNamespace {
 LOG_DECLARE_DEFAULT_CONTEXT(defaultContextForSpecificNamespace, "MAI2", "This is a description of that logging context");
 
 void MyFunction() {
-	log_info() << "My function called";
+    log_info() << "My function called";
 }
 
-}
+} // namespace MyNamespace
 
 struct MyClass {
 
-	// Define the log context to be used for that class. This overrides any default context which might have previously be set
-	LOG_DECLARE_CLASS_CONTEXT("CCTX", "This is a class-specific context");
+    // Define the log context to be used for that class. This overrides any default context which might have previously be set
+    LOG_DECLARE_CLASS_CONTEXT("CCTX", "This is a class-specific context");
 
-	void doSomething() {
-		log_debug() << "We are doing something"; // This log uses the class log context
-	}
-
+    void doSomething() {
+        log_debug() << "We are doing something"; // This log uses the class log context
+    }
 };
 
 struct MySubClass : MyClass {
 
-	// Define the log context to be used for that class. This overrides any default context which might have previously be set
-	LOG_DECLARE_CLASS_CONTEXT("CC", "This is a class-specific context for our sub-class");
+    // Define the log context to be used for that class. This overrides any default context which might have previously be set
+    LOG_DECLARE_CLASS_CONTEXT("CC", "This is a class-specific context for our sub-class");
 
-	void doSomethingElse() {
-		log_debug() << "We are doing something else";
-		log_verbose() << "This is a verbose log";
-	}
-
+    void doSomethingElse() {
+        log_debug() << "We are doing something else";
+        log_verbose() << "This is a verbose log";
+    }
 };
 
 struct MyClassWithImportedContext {
 
-	// Define the log context to be used for that class. This overrides any default context which might have previously be set
-	LOG_SET_CLASS_CONTEXT(anotherContext);
+    // Define the log context to be used for that class. This overrides any default context which might have previously be set
+    LOG_SET_CLASS_CONTEXT(anotherContext);
 
-	void doSomething() {
-		log_debug() << "We are doing something. Imported context"; // This log uses the class log context
-	}
-
+    void doSomething() {
+        log_debug() << "We are doing something. Imported context"; // This log uses the class log context
+    }
 };
 
 struct SecondClassWithImportedContext {
 
-	// Define the log context to be used for that class. This overrides any default context which might have previously be set
-	LOG_SET_CLASS_CONTEXT(anotherContext);
+    // Define the log context to be used for that class. This overrides any default context which might have previously be set
+    LOG_SET_CLASS_CONTEXT(anotherContext);
 
-	void doSomething() {
-		log_debug() << "We are doing something. Imported context"; // This log uses the class log context
-	}
-
+    void doSomething() {
+        log_debug() << "We are doing something. Imported context"; // This log uses the class log context
+    }
 };
 
 void myFunction() {
 
-	log_debug() << static_cast<int8_t>(255);
-	log_debug() << static_cast<uint8_t>(255);
+    log_debug() << static_cast<int8_t>(255);
+    log_debug() << static_cast<uint8_t>(255);
 
-	// Redefines the context to use for this scope (this function)
-	LOG_DECLARE_DEFAULT_LOCAL_CONTEXT("CXT3", "Function-specific logging context");
+    // Redefines the context to use for this scope (this function)
+    LOG_DECLARE_DEFAULT_LOCAL_CONTEXT("CXT3", "Function-specific logging context");
 
-	log_info() << "myFunction log 1";
-	log_warn() << "myFunction log 2";
+    log_info() << "myFunction log 1";
+    log_warn() << "myFunction log 2";
 
-	std::array<uint8_t , 3> myArray {1,2,3};
-	std::span sp {myArray};
-	log_debug() << "array: " << sp;
-	log_debug() << "span: " << myArray;
+    std::array<uint8_t, 3> myArray{1, 2, 3};
+    std::span sp{myArray};
+    log_debug() << "array: " << sp;
+    log_debug() << "span: " << myArray;
 
-	std::map<uint8_t , std::string> myMap {{1,"aa"}, {3,"bb"}};
-	log_debug() << "map: " << myMap;
+    std::map<uint8_t, std::string> myMap{{1, "aa"}, {3, "bb"}};
+    log_debug() << "map: " << myMap;
 
-	int i = 555;
-	log_debug() << std::hex << i << std::dec << " / " << i;
-	log_debug() << i << std::endl;
+    int i = 555;
+    log_debug() << std::hex << i << std::dec << " / " << i;
+    log_debug() << i << std::endl;
 
-	log_with_context(getDefaultContext(), logging::LogLevel::Info)<< std::hex << i << std::endl;
+    log_with_context(getDefaultContext(), logging::LogLevel::Info) << std::hex << i << std::endl;
 
-	size_t dd = 0x123456789986754;
-	log_info() << dd;
-	log_info() << std::hex << dd;
-
+    size_t dd = 0x123456789986754;
+    log_info() << dd;
+    log_info() << std::hex << dd;
 }
 
 int generateDataForLogging() {
-	static int count = 0;
-	printf("generateDataForLogging called %i time(s)\n", ++count);
-	return 100;
+    static int count = 0;
+    printf("generateDataForLogging called %i time(s)\n", ++count);
+    return 100;
 }
 
+class MyClass2 {};
 
-int main(int, const char**) {
+int main(int, char const**) {
 
-	log_debug().writeFormatted("This log is using a format string, similar to the printf syntax. This is an int : %i", 345);
-	log_error().writeFormatted("Another way to use the printf variant %i", 7345).writeFormatted(". Done");
+    log_debug().noFail() << MyClass2{};
 
-	log_error().writeFormatted("This one is mixed. Here is a float : ") << 5.7F;
-	log_warn() << 5.7;
-	log_warn() << "Test string";
+    log_debug().writeFormatted("This log is using a format string, similar to the printf syntax. This is an int : %i", 345);
+    log_error().writeFormatted("Another way to use the printf variant %i", 7345).writeFormatted(". Done");
 
-	log_error() << std::string_view{"This is a string used via a string_view. XXXXX. This content should not be visible"}.substr(0, 41);
+    log_error().writeFormatted("This one is mixed. Here is a float : ") << 5.7F;
+    log_warn() << 5.7;
+    log_warn() << "Test string";
 
-	myFunction();
+    log_error() << std::string_view{"This is a string used via a string_view. XXXXX. This content should not be visible"}.substr(0, 41);
 
-	myFunction2();
+    myFunction();
 
-	MySubClass o;
-	o.doSomething();
-	o.doSomethingElse();
+    myFunction2();
 
-	MyClassWithImportedContext o2;
-	o2.doSomething();
+    MySubClass o;
+    o.doSomething();
+    o.doSomethingElse();
 
-	SecondClassWithImportedContext o3;
-	o3.doSomething();
+    MyClassWithImportedContext o2;
+    o2.doSomething();
 
-	std::string stdString = "That is a std::string";
-	log_error().write("Values can be passed at once to the write method. ", stdString, " / " , 1234);
+    SecondClassWithImportedContext o3;
+    o3.doSomething();
 
-	std::vector<char> charVector;
-	for (char i = '0'; i <= '0' + 40; i++)
-		charVector.push_back(i);
+    std::string stdString = "That is a std::string";
+    log_error().write("Values can be passed at once to the write method. ", stdString, " / ", 1234);
 
-	log_warn() << "This is a vector of chars : " << charVector;
+    std::vector<char> charVector;
+    for (char i = '0'; i <= '0' + 40; i++)
+        charVector.push_back(i);
 
-	MyNamespace::MyFunction();
+    log_warn() << "This is a vector of chars : " << charVector;
 
-	std::vector<MyClass*> vectorOfPointers;
-	vectorOfPointers.push_back(new MyClass());
-	vectorOfPointers.push_back(new MyClass());
+    MyNamespace::MyFunction();
 
-	log_debug() << vectorOfPointers;
+    std::vector<MyClass*> vectorOfPointers;
+    vectorOfPointers.push_back(new MyClass());
+    vectorOfPointers.push_back(new MyClass());
 
-	log_warn() << generateDataForLogging();
-	log_verbose() << generateDataForLogging();
+    log_debug() << vectorOfPointers;
 
-	log_info() << "A log with std::endl" << std::endl;
-	log_info() << "A log with std::ends" << std::ends;
-	log_info() << "A log with std::flush" << std::flush;
+    log_warn() << generateDataForLogging();
+    log_verbose() << generateDataForLogging();
 
-	static const int DURATION = 1000;
+    log_info() << "A log with std::endl" << std::endl;
+    log_info() << "A log with std::ends" << std::ends;
+    log_info() << "A log with std::flush" << std::flush;
 
-	log_info() << "Waiting " << DURATION << " seconds";
+    static int const DURATION = 1000;
 
-	for(int i = DURATION ; i>0 ; i--) {
-		log_info() << i << " seconds before termination";
-		sleep(1);
-	}
+    log_info() << "Waiting " << DURATION << " seconds";
 
-	disableConsoleLogging();
-	log_error() << "This log should not visible in the console";
+    for (int i = DURATION; i > 0; i--) {
+        log_info() << i << " seconds before termination";
+        sleep(1);
+    }
 
-	log_info() << "We are done. Bye";
+    disableConsoleLogging();
+    log_error() << "This log should not visible in the console";
+
+    log_info() << "We are done. Bye";
 }

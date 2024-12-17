@@ -9,5 +9,5 @@ LOG_IMPORT_CONTEXT(anotherContext);
 void myFunction2();
 
 inline void disableConsoleLogging() {
-	logging::ConsoleLogContext::setGlobalLogLevel(logging::LogLevel::None);
+    logging::ConsoleLogContext::setGlobalLogLevel(logging::LogLevel::None);
 }

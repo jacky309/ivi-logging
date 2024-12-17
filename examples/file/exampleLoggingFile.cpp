@@ -6,11 +6,10 @@ LOG_DEFINE_APP_IDS("MyAp", "This is a small application showing how to use ivi-l
 // Instantiate a log context and define it as default for this module
 LOG_DECLARE_DEFAULT_CONTEXT(mainContext, "MAIN", "This is a description of that logging context");
 
-static constexpr const char* FILE_PATH = "/tmp/ivi-logging-test.txt";
+static constexpr char const* FILE_PATH = "/tmp/ivi-logging-test.txt";
 
-int main(int, const char**) {
-	logging::FileLogContext::setFilePath(FILE_PATH);
-	log_info() << "This log should be written to a file as well : " << FILE_PATH;
-	return 0;
-
+int main(int, char const**) {
+    logging::FileLogContext::setFilePath(FILE_PATH);
+    log_info() << "This log should be written to a file as well : " << FILE_PATH;
+    return 0;
 }

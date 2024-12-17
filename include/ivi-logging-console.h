@@ -8,59 +8,57 @@ namespace logging {
 class StreamLogData;
 class ConsoleLogData;
 
-static constexpr const char ANSI_COLOR_OFF[] = "\x1b[0m";
-static constexpr const char ANSI_COLOR_BLACK[] = "\x1b[30m";
-static constexpr const char ANSI_COLOR_RED[] = "\x1b[31m";
-static constexpr const char ANSI_COLOR_GREEN[] = "\x1b[32m";
-static constexpr const char ANSI_COLOR_YELLOW[] = "\x1b[33m";
-static constexpr const char ANSI_COLOR_BLUE[] = "\x1b[34m";
-static constexpr const char ANSI_COLOR_MAGENTA[] = "\x1b[35m";
-static constexpr const char ANSI_COLOR_CYAN[] = "\x1b[36m";
-static constexpr const char ANSI_COLOR_GRAY[] = "\x1b[37m";
-static constexpr const char ANSI_COLOR_BRIGHT[] = "\x1b[1m";
-static constexpr const char ANSI_COLOR_DIM[] = "\x1b[2m";
-static constexpr const char ANSI_BLINK[] = "\x1b[5m";
-static constexpr const char ANSI_RESET_BRIGHT[] = "\x1b[0m";
-
-
+static constexpr char const ANSI_COLOR_OFF[] = "\x1b[0m";
+static constexpr char const ANSI_COLOR_BLACK[] = "\x1b[30m";
+static constexpr char const ANSI_COLOR_RED[] = "\x1b[31m";
+static constexpr char const ANSI_COLOR_GREEN[] = "\x1b[32m";
+static constexpr char const ANSI_COLOR_YELLOW[] = "\x1b[33m";
+static constexpr char const ANSI_COLOR_BLUE[] = "\x1b[34m";
+static constexpr char const ANSI_COLOR_MAGENTA[] = "\x1b[35m";
+static constexpr char const ANSI_COLOR_CYAN[] = "\x1b[36m";
+static constexpr char const ANSI_COLOR_GRAY[] = "\x1b[37m";
+static constexpr char const ANSI_COLOR_BRIGHT[] = "\x1b[1m";
+static constexpr char const ANSI_COLOR_DIM[] = "\x1b[2m";
+static constexpr char const ANSI_BLINK[] = "\x1b[5m";
+static constexpr char const ANSI_RESET_BRIGHT[] = "\x1b[0m";
 
 class StreamLogContextAbstract : public LogContextBase {
-public:
-	StreamLogContextAbstract() {
-	}
+  public:
+    StreamLogContextAbstract() {
+    }
 
-	virtual ~StreamLogContextAbstract() {
-	}
+    virtual ~StreamLogContextAbstract() {
+    }
 
-	void setParentContext(LogContextCommon& context) {
-		m_context = &context;
-	}
+    void setParentContext(LogContextCommon& context) {
+        m_context = &context;
+    }
 
-	const char* getShortID() {
-		return m_context->getID();
-	}
+    char const* getShortID() {
+        return m_context->getID();
+    }
 
-	virtual FILE* getFile(StreamLogData& data) = 0;
+    virtual FILE* getFile(StreamLogData& data) = 0;
 
-	void setLogLevel(LogLevel level) {
-		m_level = level;
-	}
+    void setLogLevel(LogLevel level) {
+        m_level = level;
+    }
 
-	LogLevel getLogLevel() const {
-		return m_level;
-	}
+    LogLevel getLogLevel() const {
+        return m_level;
+    }
 
-	virtual bool isEnabled(LogLevel level) const {
-		return ( level <= getLogLevel() );
-	}
+    virtual bool isEnabled(LogLevel level) const {
+        return (level <= getLogLevel());
+    }
 
-	void write(const char* s, StreamLogData& data);
+    void write(char const* s, StreamLogData& data);
 
-	static unsigned int getConsoleWidth();
+    static unsigned int getConsoleWidth();
 
-private:
-	LogContextCommon* m_context = nullptr;
-	LogLevel m_level = LogLevel::Debug;
+  private:
+    LogContextCommon* m_context = nullptr;
+    LogLevel m_level = LogLevel::Debug;
 };
 
 /**
@@ -68,341 +66,357 @@ private:
  */
 class ConsoleLogContext : public StreamLogContextAbstract {
 
-public:
-	typedef ConsoleLogData LogDataType;
+  public:
+    typedef ConsoleLogData LogDataType;
 
-	static const int DEFAULT_WIDTH = 150;
+    static int const DEFAULT_WIDTH = 150;
 
-	ConsoleLogContext();
+    ConsoleLogContext();
 
-	bool isEnabled(LogLevel level) const override {
-		return ( StreamLogContextAbstract::isEnabled(level) && (level <= s_defaultLogLevel) );
-	}
+    bool isEnabled(LogLevel level) const override {
+        return (StreamLogContextAbstract::isEnabled(level) && (level <= s_defaultLogLevel));
+    }
 
-	/**
-	 * Sets the global log level for the logging to the console
-	 * By setting that log level to "None", you ensure that no log will be sent to the console
-	 * By setting that log level to "All" (default value), you disable the effect of the global filtering, which means
-	 * that only the log levels of the individual contexts will be taken into account.
-	 */
-	static void setGlobalLogLevel(LogLevel level) {
-		s_defaultLogLevel = level;
-	}
+    /**
+     * Sets the global log level for the logging to the console
+     * By setting that log level to "None", you ensure that no log will be sent to the console
+     * By setting that log level to "All" (default value), you disable the effect of the global filtering, which means
+     * that only the log levels of the individual contexts will be taken into account.
+     */
+    static void setGlobalLogLevel(LogLevel level) {
+        s_defaultLogLevel = level;
+    }
 
-	FILE* getFile(StreamLogData& data) override;
+    FILE* getFile(StreamLogData& data) override;
 
-	bool isColorsEnabled() {
-		return m_colorSupport;
-	}
+    bool isColorsEnabled() {
+        return m_colorSupport;
+    }
 
-private:
-	static LogLevel s_defaultLogLevel;
-	static bool s_envVarCheckDone;
-	bool m_colorSupport;
+  private:
+    static LogLevel s_defaultLogLevel;
+    static bool s_envVarCheckDone;
+    bool m_colorSupport;
 };
 
 void getCurrentTime(unsigned int& seconds, unsigned int& milliseconds);
 
 class StreamLogData : public LogData {
 
-public:
-	static constexpr const char* DEFAULT_PREFIX = "%05d.%03d | %4.4s [%s] "; // with timestamp
+  public:
+    static constexpr char const* DEFAULT_PREFIX = "%05d.%03d | %4.4s [%s] "; // with timestamp
 
-	static constexpr const char* DEFAULT_SUFFIX_WITH_FILE_LOCATION = " [ %.2i | %s / %s - %d ]";
-	static constexpr const char* DEFAULT_SUFFIX_WITH_SHORT_FILE_LOCATION_WITHOUT_FUNCTION = " | %s%.0s:%d ";
-	static constexpr const char* DEFAULT_THREAD_NAME_SUFFIX = "| %.2i / %s ";
-	static constexpr const char* DEFAULT_SUFFIX_WITH_SHORT_FILE_LOCATION_WITHOUT_FUNCTION_WITH_THREAD_NAME = " [ %s%.0s - %d | %.2i-%.16s ]";
-	static constexpr const char* DEFAULT_SUFFIX_WITHOUT_FILE_LOCATION = "";
+    static constexpr char const* DEFAULT_SUFFIX_WITH_FILE_LOCATION = " [ %.2i | %s / %s - %d ]";
+    static constexpr char const* DEFAULT_SUFFIX_WITH_SHORT_FILE_LOCATION_WITHOUT_FUNCTION = " | %s%.0s:%d ";
+    static constexpr char const* DEFAULT_THREAD_NAME_SUFFIX = "| %.2i / %s ";
+    static constexpr char const* DEFAULT_SUFFIX_WITH_SHORT_FILE_LOCATION_WITHOUT_FUNCTION_WITH_THREAD_NAME = " [ %s%.0s - %d | %.2i-%.16s ]";
+    static constexpr char const* DEFAULT_SUFFIX_WITHOUT_FILE_LOCATION = "";
 
-	typedef StreamLogContextAbstract ContextType;
+    typedef StreamLogContextAbstract ContextType;
 
-	virtual ~StreamLogData() {
-	}
+    virtual ~StreamLogData() {
+    }
 
-	void flushLog() {
-		if ( isEnabled() ) {
-			writeSuffix();
+    void flushLog() {
+        if (isEnabled()) {
+            writeSuffix();
 
-			// add terminal null character
-			m_content.resize(m_content.size() + 1);
-			m_content[m_content.size() - 1] = 0;
-			m_context->write( m_content.getData(), *this );
-		}
-	}
+            // add terminal null character
+            m_content.resize(m_content.size() + 1);
+            m_content[m_content.size() - 1] = 0;
+            m_context->write(m_content.getData(), *this);
+        }
+    }
 
-	void setPrefixFormat(const char* format) {
-		m_prefixFormat = format;
-	}
+    void setPrefixFormat(char const* format) {
+        m_prefixFormat = format;
+    }
 
-	void setSuffixFormat(const char* format) {
-		m_suffixFormat = format;
-	}
+    void setSuffixFormat(char const* format) {
+        m_suffixFormat = format;
+    }
 
-	void init(StreamLogContextAbstract& aContext, LogInfo& data) {
-		m_context = &aContext;
-		m_data = data;
+    void init(StreamLogContextAbstract& aContext, LogInfo& data) {
+        m_context = &aContext;
+        m_data = data;
 
-		if ( isEnabled() )
-			writePrefix();
+        if (isEnabled())
+            writePrefix();
+    }
 
-	}
+    virtual void writePrefix() {
+        unsigned int seconds, milliseconds;
+        getCurrentTime(seconds, milliseconds);
+        writeFormatted(m_prefixFormat, seconds, milliseconds, getContext()->getShortID(), getLogLevelString(getData().getLogLevel()));
+    }
 
-	virtual void writePrefix() {
-		unsigned int seconds, milliseconds;
-		getCurrentTime(seconds, milliseconds);
-		writeFormatted( m_prefixFormat, seconds, milliseconds, getContext()->getShortID(), getLogLevelString( getData().getLogLevel() ) );
-	}
+    virtual void writeSuffix() {
+        writeFormatted(getSuffix().getData());
+    }
 
-	virtual void writeSuffix() {
-		writeFormatted( getSuffix().getData() );
-	}
+    virtual ByteArray getSuffix() {
+        ByteArray array;
 
-	virtual ByteArray getSuffix() {
-		ByteArray array;
+        // we ignore the env variable since we always want source code information in the console
+        writeFormatted(array, m_suffixFormat, getData().getFileName(), getData().getPrettyFunction(), getData().getLineNumber());
 
-		// we ignore the env variable since we always want source code information in the console
-		writeFormatted( array, m_suffixFormat, getData().getFileName(), getData().getPrettyFunction(), getData().getLineNumber());
+        if (m_context->isThreadInfoEnabled()) {
+            writeFormatted(array, m_suffixThreadNameFormat, getThreadInformation().getID(), getThreadInformation().getName());
+        }
+        return array;
+    }
 
-		if (m_context->isThreadInfoEnabled()) {
-			writeFormatted( array, m_suffixThreadNameFormat, getThreadInformation().getID(), getThreadInformation().getName());
-		}
-		return array;
-	}
+    ContextType* getContext() {
+        return m_context;
+    }
 
-	ContextType* getContext() {
-		return m_context;
-	}
+    static char const* getLogLevelString(LogLevel logLevel) {
+        char const* v = "";
+        switch (logLevel) {
+            case LogLevel::Debug:
+                v = " Debug ";
+                break;
+            case LogLevel::Info:
+                v = " Info  ";
+                break;
+            case LogLevel::Warning:
+                v = "Warning";
+                break;
+            case LogLevel::Error:
+                v = " Error ";
+                break;
+            case LogLevel::Fatal:
+                v = " Fatal ";
+                break;
+            case LogLevel::Verbose:
+                v = "Verbose";
+                break;
+            default:
+                v = "Invalid";
+                break;
+        }
+        return v;
+    }
 
-	static const char* getLogLevelString(LogLevel logLevel) {
-		const char* v = "";
-		switch (logLevel) {
-		case LogLevel::Debug : v = " Debug "; break;
-		case LogLevel::Info : v = " Info  "; break;
-		case LogLevel::Warning : v = "Warning"; break;
-		case LogLevel::Error : v = " Error "; break;
-		case LogLevel::Fatal : v = " Fatal "; break;
-		case LogLevel::Verbose : v = "Verbose"; break;
-		default : v = "Invalid"; break;
-		}
-		return v;
-	}
+    bool isEnabled() {
+        return (m_context->isEnabled(getData().getLogLevel()));
+    }
 
-	bool isEnabled() {
-		return ( m_context->isEnabled( getData().getLogLevel() ) );
-	}
+    LogInfo const& getData() const {
+        return m_data;
+    }
 
-	const LogInfo& getData() const {
-		return m_data;
-	}
+    template <typename... Args>
+    StreamLogData& writeFormatted(char const* format, Args... args) {
+        if (isEnabled()) {
+            writeFormatted(m_content, format, args...);
+        }
+        return *this;
+    }
 
-	template<typename ... Args>
-	StreamLogData& writeFormatted(const char* format, Args ... args) {
-		if ( isEnabled() ) {
-			writeFormatted(m_content, format, args ...);
-		}
-		return *this;
-	}
+    StreamLogData& writeInt(int value) {
+        return writeFormatted(m_hexEnabled ? "%X" : "%d", value);
+    }
 
-	StreamLogData& writeInt(int value) {
-		return writeFormatted(m_hexEnabled ? "%X" : "%d", value);
-	}
+    StreamLogData& writeInt(unsigned int value) {
+        return writeFormatted(m_hexEnabled ? "%X" : "%u", value);
+    }
 
-	StreamLogData& writeInt(unsigned int value) {
-		return writeFormatted(m_hexEnabled ? "%X" : "%u", value);
-	}
-
-	template<typename ... Args>
-	void writeFormatted(ByteArray& byteArray, const char* format, Args ... args) const {
+    template <typename... Args>
+    void writeFormatted(ByteArray& byteArray, char const* format, Args... args) const {
 
 #pragma GCC diagnostic push
-		// Make sure GCC does not complain about not being able to check the format string since it is no literal string
+        // Make sure GCC does not complain about not being able to check the format string since it is no literal string
 #pragma GCC diagnostic ignored "-Wformat-security"
-		int size = snprintf(nullptr, 0, format, args ...) + 1; // +1 since the snprintf returns the number of characters excluding the null termination
-		size_t startOfStringIndex = byteArray.size();
-		byteArray.resize(byteArray.size() + size);
-		char* p = byteArray.getData() + startOfStringIndex;
-		snprintf(p, size, format, args ...);
+        int size = snprintf(nullptr, 0, format, args...) + 1; // +1 since the snprintf returns the number of characters excluding the null termination
+        size_t startOfStringIndex = byteArray.size();
+        byteArray.resize(byteArray.size() + size);
+        char* p = byteArray.getData() + startOfStringIndex;
+        snprintf(p, size, format, args...);
 
-		// remove terminal null character
-		byteArray.resize(byteArray.size() - 1);
+        // remove terminal null character
+        byteArray.resize(byteArray.size() - 1);
 #pragma GCC diagnostic pop
-	}
+    }
 
-	void setHexEnabled(bool enabled) {
-		m_hexEnabled = enabled;
-	}
+    void setHexEnabled(bool enabled) {
+        m_hexEnabled = enabled;
+    }
 
-	bool isHexEnabled() const {
-		return m_hexEnabled;
-	}
+    bool isHexEnabled() const {
+        return m_hexEnabled;
+    }
 
-protected:
-	ContextType* m_context = nullptr;
-	ByteArray m_content;
-	LogInfo m_data;
-	bool m_hexEnabled {false};
+  protected:
+    ContextType* m_context = nullptr;
+    ByteArray m_content;
+    LogInfo m_data;
+    bool m_hexEnabled{false};
 
-	const char* m_prefixFormat = DEFAULT_PREFIX;
-	//	const char* m_suffixFormat = DEFAULT_SUFFIX_WITHOUT_FILE_LOCATION;
-//	const char* m_suffixFormat = DEFAULT_SUFFIX_WITH_SHORT_FILE_LOCATION_WITHOUT_FUNCTION_WITH_THREAD_NAME;
-	const char* m_suffixFormat = DEFAULT_SUFFIX_WITH_SHORT_FILE_LOCATION_WITHOUT_FUNCTION;
-	const char* m_suffixThreadNameFormat = DEFAULT_THREAD_NAME_SUFFIX;
-
+    char const* m_prefixFormat = DEFAULT_PREFIX;
+    //	const char* m_suffixFormat = DEFAULT_SUFFIX_WITHOUT_FILE_LOCATION;
+    //	const char* m_suffixFormat = DEFAULT_SUFFIX_WITH_SHORT_FILE_LOCATION_WITHOUT_FUNCTION_WITH_THREAD_NAME;
+    char const* m_suffixFormat = DEFAULT_SUFFIX_WITH_SHORT_FILE_LOCATION_WITHOUT_FUNCTION;
+    char const* m_suffixThreadNameFormat = DEFAULT_THREAD_NAME_SUFFIX;
 };
 
 inline FILE* ConsoleLogContext::getFile(StreamLogData& data) {
-	if (data.getData().getLogLevel() == LogLevel::Error)
-		return stderr;
-	else
-		return stdout;
+    if (data.getData().getLogLevel() == LogLevel::Error)
+        return stderr;
+    else
+        return stdout;
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, std::string_view v) {
-	return data.writeFormatted("%.*s", static_cast<int>(v.length()), v.data());
+    return data.writeFormatted("%.*s", static_cast<int>(v.length()), v.data());
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, bool v) {
-	return data.writeFormatted("%s", v ? "true" : "false");
+    return data.writeFormatted("%s", v ? "true" : "false");
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, char v) {
-	return data.writeInt(v);
+    return data.writeInt(v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, unsigned char v) {
-	return data.writeInt(v);
+    return data.writeInt(v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, signed short v) {
-	return data.writeInt(v);
+    return data.writeInt(v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, unsigned short v) {
-	return data.writeInt(v);
+    return data.writeInt(v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, signed int v) {
-	return data.writeInt(v);
+    return data.writeInt(v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, unsigned int v) {
-	return data.writeInt(v);
+    return data.writeInt(v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, long long v) {
-	return data.writeFormatted(data.isHexEnabled() ? "%llX" : "%lld", v);
+    return data.writeFormatted(data.isHexEnabled() ? "%llX" : "%lld", v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, unsigned long long v) {
-	return data.writeFormatted(data.isHexEnabled() ? "%llX" : "%llu", v);
+    return data.writeFormatted(data.isHexEnabled() ? "%llX" : "%llu", v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, signed long v) {
-	return data.writeFormatted(data.isHexEnabled() ? "%lX" : "%ld", v);
+    return data.writeFormatted(data.isHexEnabled() ? "%lX" : "%ld", v);
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, unsigned long v) {
-	return data.writeFormatted(data.isHexEnabled() ? "%lX" : "%lu", v);
+    return data.writeFormatted(data.isHexEnabled() ? "%lX" : "%lu", v);
 }
 
-template<typename Type>
-inline StreamLogData& operator<<(StreamLogData& data, const Type* v) {
-	return data.writeFormatted("%s", pointerToString(v).c_str());
+template <typename Type>
+inline StreamLogData& operator<<(StreamLogData& data, Type const* v) {
+    return data.writeFormatted("%s", pointerToString(v).c_str());
 }
 
-inline StreamLogData& operator<<(StreamLogData& data, const char* v) {
-	return data.writeFormatted("%s", v ? v : "null");
+inline StreamLogData& operator<<(StreamLogData& data, char const* v) {
+    return data.writeFormatted("%s", v ? v : "null");
 }
 
-template<size_t N>
-inline StreamLogData& operator<<(StreamLogData& data, const char (&v)[N]) {
-   data << (const char*) v;
-   return data;
+template <size_t N>
+inline StreamLogData& operator<<(StreamLogData& data, char const (&v)[N]) {
+    data << (char const*)v;
+    return data;
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, float v) {
-	return data.writeFormatted("%f", v);
+    return data.writeFormatted("%f", v);
 }
 
-inline StreamLogData& operator<<(StreamLogData& data, const std::string& s) {
-	return data.writeFormatted("%s", s.c_str());
+inline StreamLogData& operator<<(StreamLogData& data, std::string const& s) {
+    return data.writeFormatted("%s", s.c_str());
 }
 
 inline StreamLogData& operator<<(StreamLogData& data, double v) {
-	return data.writeFormatted("%f", v);
+    return data.writeFormatted("%f", v);
 }
 
 class ConsoleLogData : public StreamLogData {
 
-public:
-	typedef ConsoleLogContext ContextType;
+  public:
+    typedef ConsoleLogContext ContextType;
 
-	virtual ~ConsoleLogData() {
-		flushLog();
-	}
+    virtual ~ConsoleLogData() {
+        flushLog();
+    }
 
-	void init(ContextType& aContext, LogInfo& data) {
-		m_context = &aContext;
-		StreamLogData::init(aContext, data);
-	}
+    void init(ContextType& aContext, LogInfo& data) {
+        m_context = &aContext;
+        StreamLogData::init(aContext, data);
+    }
 
-	enum class Command {
-		RESET = 0, BRIGHT = 1, DIM = 2, UNDERLINE = 3, BLINK = 4, REVERSE = 7, HIDDEN = 8
-	};
+    enum class Command { RESET = 0, BRIGHT = 1, DIM = 2, UNDERLINE = 3, BLINK = 4, REVERSE = 7, HIDDEN = 8 };
 
-	enum class Color {
-		BLACK = 0, RED = 1, GREEN = 2, YELLOW = 3, BLUE = 4, MAGENTA = 5, CYAN = 6, WHITE = 7
-	};
+    enum class Color { BLACK = 0, RED = 1, GREEN = 2, YELLOW = 3, BLUE = 4, MAGENTA = 5, CYAN = 6, WHITE = 7 };
 
-	virtual void writePrefix() override {
-	    writeHeaderColor();
-		StreamLogData::writePrefix();
+    virtual void writePrefix() override {
+        writeHeaderColor();
+        StreamLogData::writePrefix();
         resetColor();
-	}
+    }
 
-	virtual void writeSuffix() override {
+    virtual void writeSuffix() override {
 
-	    writeFooterColor();
+        writeFooterColor();
 
-		ByteArray suffixArray = getSuffix();
+        ByteArray suffixArray = getSuffix();
 
-		writeFormatted(suffixArray, "\n");
+        writeFormatted(suffixArray, "\n");
 
-		int width = m_context->getConsoleWidth();
+        int width = m_context->getConsoleWidth();
 
-		// If no width is available, use default width
-		if (width == 0)
-			width = ContextType::DEFAULT_WIDTH;
+        // If no width is available, use default width
+        if (width == 0)
+            width = ContextType::DEFAULT_WIDTH;
 
-		width -= m_content.size() + suffixArray.size() - m_invisibleCharacterCount;
+        width -= m_content.size() + suffixArray.size() - m_invisibleCharacterCount;
 
-		// If the output line is longer that the console width, we print our suffix on the next line
-		if (width < 0) {
-			writeFormatted("\n");
-			width = m_context->getConsoleWidth() - static_cast<int>(suffixArray.size());
-		}
+        // If the output line is longer that the console width, we print our suffix on the next line
+        if (width < 0) {
+            writeFormatted("\n");
+            width = m_context->getConsoleWidth() - static_cast<int>(suffixArray.size());
+        }
 
-		for(int i = 0; i < width; i++) {
-			writeFormatted(" ");
-		}
+        for (int i = 0; i < width; i++) {
+            writeFormatted(" ");
+        }
 
-		writeFormatted( "%s", suffixArray.getData() );
+        writeFormatted("%s", suffixArray.getData());
 
         resetColor();
-
-	}
+    }
 
     void writeHeaderColor() {
-        if ( !m_context->isColorsEnabled() )
+        if (!m_context->isColorsEnabled())
             return;
 
         std::string s = ANSI_COLOR_OFF;
         switch (getData().getLogLevel()) {
-        case LogLevel::Warning : s = ANSI_COLOR_MAGENTA ; break;
-        case LogLevel::Error :
-        case LogLevel::Fatal: s = ANSI_COLOR_RED; s += ANSI_COLOR_BRIGHT;break;
-        case LogLevel::Verbose : s = ANSI_COLOR_GREEN; break;
-        default: s = ANSI_COLOR_OFF; break;
+            case LogLevel::Warning:
+                s = ANSI_COLOR_MAGENTA;
+                break;
+            case LogLevel::Error:
+            case LogLevel::Fatal:
+                s = ANSI_COLOR_RED;
+                s += ANSI_COLOR_BRIGHT;
+                break;
+            case LogLevel::Verbose:
+                s = ANSI_COLOR_GREEN;
+                break;
+            default:
+                s = ANSI_COLOR_OFF;
+                break;
         }
         *this << s;
         m_invisibleCharacterCount += s.length();
@@ -413,7 +427,7 @@ public:
     }
 
     void resetColor() {
-        if ( !m_context->isColorsEnabled() )
+        if (!m_context->isColorsEnabled())
             return;
 
         std::string s = ANSI_COLOR_OFF;
@@ -422,9 +436,8 @@ public:
         m_invisibleCharacterCount += s.length();
     }
 
-	int m_invisibleCharacterCount = 0;
-	ContextType* m_context;
-
+    int m_invisibleCharacterCount = 0;
+    ContextType* m_context;
 };
 
-}
+} // namespace logging

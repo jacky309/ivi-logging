@@ -13,65 +13,60 @@ class NullLogContext;
  */
 class NullLogData : public LogData {
 
-public:
-
-	void init([[maybe_unused]] NullLogContext& context, [[maybe_unused]] LogInfo& data) {
-	}
-
-	bool isEnabled() const {
-		return false;
-	}
-
-    template<typename ... Args>
-    void writeFormatted(const char*, Args ...) {
+  public:
+    void init([[maybe_unused]] NullLogContext& context, [[maybe_unused]] LogInfo& data) {
     }
 
+    bool isEnabled() const {
+        return false;
+    }
+
+    template <typename... Args>
+    void writeFormatted(char const*, Args...) {
+    }
 };
 
 class NullLogContext {
 
-public:
+  public:
+    typedef NullLogData LogDataType;
 
-	typedef NullLogData LogDataType;
+    void setParentContext([[maybe_unused]] LogContextCommon& context) {
+    }
 
-	void setParentContext([[maybe_unused]] LogContextCommon& context) {
-	}
+    bool isEnabled([[maybe_unused]] LogLevel logLevel) {
+        return false;
+    }
 
-	bool isEnabled([[maybe_unused]] LogLevel logLevel) {
-		return false;
-	}
-
-	void registerContext() {
-	}
-
+    void registerContext() {
+    }
 };
 
-
-template<typename Type>
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] const Type* v) {
-	return data;
+template <typename Type>
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] Type const* v) {
+    return data;
 }
 
 inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] bool v) {
     return data;
 }
 
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] const char* v) {
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] char const* v) {
     return data;
 }
 
-template<size_t N>
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] const char (&v)[N]) {
-   return data;
-}
-
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] const std::string& v) {
+template <size_t N>
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] char const (&v)[N]) {
     return data;
 }
 
-template<typename T, typename = typename std::enable_if<std::is_fundamental_v<T>>::type>
+inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] std::string const& v) {
+    return data;
+}
+
+template <typename T, typename = typename std::enable_if<std::is_fundamental_v<T>>::type>
 inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] const T& v) {
     return data;
 }
 
-}
+} // namespace logging

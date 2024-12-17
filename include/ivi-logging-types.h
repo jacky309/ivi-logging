@@ -4,25 +4,23 @@
 #pragma once
 
 #include "ivi-logging-common.h"
-#include <type_traits>
 #include "ivi-logging-stl.h"
+#include <type_traits>
 
 namespace logging {
 
-static constexpr const char* NULL_POINTER_STRING = "nullptr";
+static constexpr char const* NULL_POINTER_STRING = "nullptr";
 
-template<typename LogDataType>
-std::enable_if_t<std::is_base_of_v<logging::LogData, LogDataType>, LogDataType&>
-operator<<(LogDataType& log, const StringBuilder& b) {
+template <typename LogDataType>
+std::enable_if_t<std::is_base_of_v<logging::LogData, LogDataType>, LogDataType&> operator<<(LogDataType& log, StringBuilder const& b) {
     log << b.str();
     return log;
 }
 
-template<typename EnumType, typename LogDataType>
-std::enable_if_t<std::is_base_of_v<logging::LogData, LogDataType> and std::is_enum_v<EnumType>, LogDataType&>
-operator<<(LogDataType& log, const EnumType& b) {
+template <typename EnumType, typename LogDataType>
+std::enable_if_t<std::is_base_of_v<logging::LogData, LogDataType> and std::is_enum_v<EnumType>, LogDataType&> operator<<(LogDataType& log, EnumType const& b) {
     log << static_cast<int>(b);
     return log;
 }
 
-}
+} // namespace logging

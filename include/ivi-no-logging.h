@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ivi-logging.h"
 #include "ivi-logging-null.h"
+#include "ivi-logging.h"
 
 namespace logging {
 
@@ -10,33 +10,33 @@ namespace logging {
 /**
  * Generate a log with "fatal" severity
  */
-#define log_fatal(args ...) log_null
+#define log_fatal(args...) log_null
 
 /**
  * Generate a log with "error" severity
  */
-#define log_error(args ...) log_null
+#define log_error(args...) log_null
 
 /**
  * Generate a log with "verbose" severity
  */
-#define log_verbose(args ...) log_null
+#define log_verbose(args...) log_null
 
 /**
  * Generate a log with "info" severity
  */
-#define log_info(args ...) log_null
+#define log_info(args...) log_null
 
 /**
  * Generate a log with "warning" severity
  */
-#define log_warn(args ...) log_null
-#define log_warning(args ...) log_null
+#define log_warn(args...) log_null
+#define log_warning(args...) log_null
 
 /**
  * Generate a log with "debug" severity
  */
-#define log_debug(args ...) log_null
+#define log_debug(args...) log_null
 
 /**
  * Defines the identifiers of an application. This macro should be used at one place in every application.
@@ -81,4 +81,4 @@ namespace logging {
  */
 #define LOG_DECLARE_CLASS_CONTEXT(contextShortID, contextDescription)
 
-}
+} // namespace logging

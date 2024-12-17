@@ -1,19 +1,19 @@
+#include "test-common.h"
 #include <pthread.h>
 #include <thread>
-#include "test-common.h"
 
 typedef LogContextWithConsolePlusDLTIfAvailable LogContext;
 
 LOG_DECLARE_DEFAULT_CONTEXT(myTestContext, "TEST", "Test context");
 
-int main(int, const char**) {
+int main(int, char const**) {
 
-	new std::thread([&] () {
-				pthread_setname_np(pthread_self(), "MyThread2");
-				log_warn() << "Test log from thread";
-			});
+    new std::thread([&]() {
+        pthread_setname_np(pthread_self(), "MyThread2");
+        log_warn() << "Test log from thread";
+    });
 
-	log_warn() << "Test from main";
+    log_warn() << "Test from main";
 
-	std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 }

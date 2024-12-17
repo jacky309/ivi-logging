@@ -5,38 +5,36 @@
 namespace logging {
 
 class FileLogData : public StreamLogData {
-public:
-	~FileLogData() {
-		flushLog();
-	}
-
+  public:
+    ~FileLogData() {
+        flushLog();
+    }
 };
 
 class FileLogContext : public StreamLogContextAbstract {
-public:
-	typedef FileLogData LogDataType;
+  public:
+    typedef FileLogData LogDataType;
 
     FILE* getFile(logging::StreamLogData&) override {
         return getFileStatic();
     }
 
-    static void openFile(const char* fileName) {
+    static void openFile(char const* fileName) {
         setFilePath(fileName);
     }
 
-    static void setFilePath(const char* fileName) {
+    static void setFilePath(char const* fileName) {
         if (getFileStatic() == nullptr) {
             getFileStatic() = fopen(fileName, "w");
         }
         assert(getFileStatic() != nullptr);
     }
 
-private:
+  private:
     static FILE*& getFileStatic() {
         static FILE* m_file;
         return m_file;
     }
-
 };
 
-}
+} // namespace logging

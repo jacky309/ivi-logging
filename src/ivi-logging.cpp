@@ -1,14 +1,14 @@
+#include "ivi-logging-console.h"
 #include "stdint.h"
 #include "stdio.h"
-#include "ivi-logging-console.h"
-#include <string>
+#include <chrono>
 #include <cstring>
 #include <dirent.h>
-#include <sys/ioctl.h>
-#include <pthread.h>
-#include <unistd.h>
 #include <mutex>
-#include <chrono>
+#include <pthread.h>
+#include <string>
+#include <sys/ioctl.h>
+#include <unistd.h>
 
 namespace logging {
 
@@ -21,130 +21,126 @@ std::mutex streamLogContextAbstractOutputMutex;
 
 std::atomic_int ThreadInformation::sNextID = ATOMIC_VAR_INIT(0);
 
-#if __GNUC_PREREQ(4,8)
+#if __GNUC_PREREQ(4, 8)
 // Note the the initialization of a "thread_local" variable occurs during the first access to it, which is not what we would like, since we
 // would like our thread ID to be set as soon as a new thread is spawned. TODO : check how to achieve that.
 static thread_local ThreadInformation threadID__;
 ThreadInformation& getThreadInformation() {
-	return threadID__;
+    return threadID__;
 }
 #else
 
-	// Alternative implementation not using "thread_local" keyword for GCC < 4.8
+// Alternative implementation not using "thread_local" keyword for GCC < 4.8
 
-	static __thread ThreadInformation* threadID__ = nullptr;
+static __thread ThreadInformation* threadID__ = nullptr;
 
-	ThreadInformation& getThreadInformation() {
-		if (threadID__ == nullptr)
-			threadID__ = new ThreadInformation();
-		return *threadID__;
-	}
+ThreadInformation& getThreadInformation() {
+    if (threadID__ == nullptr)
+        threadID__ = new ThreadInformation();
+    return *threadID__;
+}
 
 #endif
 
-
 void setDefaultAPPIDSIfNeeded() {
-	if (s_pAppLogContext == nullptr) {
-		//		fprintf(
-		//			stderr,
-		//			LOGGING_WARNING_OUTPUT_PREFIX
-		//			"Your application should define its ID using the LOG_DEFINE_APP_IDS macro\n");
-		pid_t pid = getpid();
-		char pidAsHex[5];
-		snprintf(pidAsHex, sizeof(pidAsHex), "%X", pid);
-		//		char pidAsDecimal[6];
-		//		snprintf(pidAsDecimal, sizeof(pidAsDecimal), "%i", pid);
-		//		std::string processName = "PID:";
-		//		processName += pidAsDecimal;
-		//		processName += " / ";
-		//		std::string processName = getProcessName(pid);
-		static AppLogContext defaultAppLogContext( pidAsHex, getProcessName(pid).c_str() );
-		s_pAppLogContext = &defaultAppLogContext;
-	}
-
+    if (s_pAppLogContext == nullptr) {
+        //		fprintf(
+        //			stderr,
+        //			LOGGING_WARNING_OUTPUT_PREFIX
+        //			"Your application should define its ID using the LOG_DEFINE_APP_IDS macro\n");
+        pid_t pid = getpid();
+        char pidAsHex[5];
+        snprintf(pidAsHex, sizeof(pidAsHex), "%X", pid);
+        //		char pidAsDecimal[6];
+        //		snprintf(pidAsDecimal, sizeof(pidAsDecimal), "%i", pid);
+        //		std::string processName = "PID:";
+        //		processName += pidAsDecimal;
+        //		processName += " / ";
+        //		std::string processName = getProcessName(pid);
+        static AppLogContext defaultAppLogContext(pidAsHex, getProcessName(pid).c_str());
+        s_pAppLogContext = &defaultAppLogContext;
+    }
 }
 
-std::string byteArrayToString(const void* buffer, size_t length) {
-	static char hexcode[] = "0123456789ABCDEF";
-	static char textBuffer[1024];
+std::string byteArrayToString(void const* buffer, size_t length) {
+    static char hexcode[] = "0123456789ABCDEF";
+    static char textBuffer[1024];
 
-	size_t dest = 0;
+    size_t dest = 0;
 
-	if (length + 1 > sizeof(textBuffer) / 3)
-		length = sizeof(textBuffer) / 3;
+    if (length + 1 > sizeof(textBuffer) / 3)
+        length = sizeof(textBuffer) / 3;
 
-	const unsigned char* bufferAsChar =
-		static_cast<const unsigned char*>(buffer);
+    unsigned char const* bufferAsChar = static_cast<unsigned char const*>(buffer);
 
-	for (size_t byteIndex = 0; byteIndex < length; byteIndex++) {
-		textBuffer[dest++] = hexcode[bufferAsChar[byteIndex] >> 4];
-		textBuffer[dest++] = hexcode[bufferAsChar[byteIndex] & 0xF];
-		textBuffer[dest++] = ' ';
-	}
+    for (size_t byteIndex = 0; byteIndex < length; byteIndex++) {
+        textBuffer[dest++] = hexcode[bufferAsChar[byteIndex] >> 4];
+        textBuffer[dest++] = hexcode[bufferAsChar[byteIndex] & 0xF];
+        textBuffer[dest++] = ' ';
+    }
 
-	textBuffer[dest] = 0;
+    textBuffer[dest] = 0;
 
-	return textBuffer;
+    return textBuffer;
 }
 
 unsigned int StreamLogContextAbstract::getConsoleWidth() {
-	struct::winsize ws;
-	if (::ioctl(0, TIOCGWINSZ, &ws) == 0) {
-		return ws.ws_col;
-	} else
-		return 0;
+    struct ::winsize ws;
+    if (::ioctl(0, TIOCGWINSZ, &ws) == 0) {
+        return ws.ws_col;
+    } else
+        return 0;
 }
 
 std::string getProcessName(pid_t pid) {
 
-	char processName[1024] = "";
+    char processName[1024] = "";
 
-	DIR* dir = opendir("/proc");
-	if (dir != nullptr) {
-		char path[128];
-		snprintf(path, sizeof(path), "/proc/%i/cmdline", pid);
-		FILE* file = fopen(path, "r");
+    DIR* dir = opendir("/proc");
+    if (dir != nullptr) {
+        char path[128];
+        snprintf(path, sizeof(path), "/proc/%i/cmdline", pid);
+        FILE* file = fopen(path, "r");
 
-		if (file != nullptr) {
-			size_t n = fread(processName, 1, sizeof(processName) - 1, file);
-			if (n > 0)
-				processName[n - 1] = 0;
-			fclose(file);
-		}
-	}
+        if (file != nullptr) {
+            size_t n = fread(processName, 1, sizeof(processName) - 1, file);
+            if (n > 0)
+                processName[n - 1] = 0;
+            fclose(file);
+        }
+    }
 
-	if (dir != nullptr)
-		closedir(dir);
+    if (dir != nullptr)
+        closedir(dir);
 
-	if (strlen(processName) == 0)
-		snprintf(processName, sizeof(processName), "Unknown process with PID %i", pid);
+    if (strlen(processName) == 0)
+        snprintf(processName, sizeof(processName), "Unknown process with PID %i", pid);
 
-	return processName;
-
+    return processName;
 }
 
-const char* ThreadInformation::getName() const {
-	std::array<char, 64> buffer;
-	auto ret = pthread_getname_np( pthread_self(), buffer.data(), std::tuple_size_v<decltype(buffer)> );
-	if (ret != 0)
-		buffer[0] = 0;
-	m_name = buffer.data();
-	return m_name.c_str();
+char const* ThreadInformation::getName() const {
+    std::array<char, 64> buffer;
+    auto ret = pthread_getname_np(pthread_self(), buffer.data(), std::tuple_size_v<decltype(buffer)>);
+    if (ret != 0)
+        buffer[0] = 0;
+    m_name = buffer.data();
+    return m_name.c_str();
 }
 
-static bool readEnvVarAsBool(const char* varName, bool defaultValue = false) {
-	auto value = getenv(varName);
-	if (value == nullptr)
-		return defaultValue;
-	return !strcmp(value, "1");
+static bool readEnvVarAsBool(char const* varName, bool defaultValue = false) {
+    auto value = getenv(varName);
+    if (value == nullptr)
+        return defaultValue;
+    return !strcmp(value, "1");
 }
 
 void LogContextBase::registerContext() {
-	if ( !s_initialized ) {
-		m_enableSourceCodeLocationInfo = readEnvVarAsBool("LOGGING_ENABLE_SOURCE_CODE_INFORMATION");
-		m_enableThreadInfo = readEnvVarAsBool("LOGGING_ENABLE_THREAD_INFORMATION");
-		s_initialized = true;
-	}
+    if (!s_initialized) {
+        m_enableSourceCodeLocationInfo = readEnvVarAsBool("LOGGING_ENABLE_SOURCE_CODE_INFORMATION");
+        m_enableThreadInfo = readEnvVarAsBool("LOGGING_ENABLE_THREAD_INFORMATION");
+        s_initialized = true;
+    }
 }
 
 bool LogContextBase::m_enableSourceCodeLocationInfo;
@@ -152,39 +148,39 @@ bool LogContextBase::m_enableThreadInfo;
 bool LogContextBase::s_initialized;
 
 ConsoleLogContext::ConsoleLogContext() {
-	m_colorSupport = (getConsoleWidth() != 0);
-	if(!s_envVarCheckDone) {
-		if(!readEnvVarAsBool("LOGGING_ENABLE_CONSOLE", true))
-			s_defaultLogLevel = LogLevel::None;
-		s_envVarCheckDone = true;
-	}
+    m_colorSupport = (getConsoleWidth() != 0);
+    if (!s_envVarCheckDone) {
+        if (!readEnvVarAsBool("LOGGING_ENABLE_CONSOLE", true))
+            s_defaultLogLevel = LogLevel::None;
+        s_envVarCheckDone = true;
+    }
 }
 
-const char* LogInfo::getFileName() const {
-	if (m_fileName == nullptr) {
-		size_t shortNamePosition = strlen(m_longFileName);
-		while ( (shortNamePosition > 0) && (m_longFileName[shortNamePosition - 1] != '/') )
-			shortNamePosition--;
-		m_fileName = m_longFileName + shortNamePosition;
-	}
-	return m_fileName;
+char const* LogInfo::getFileName() const {
+    if (m_fileName == nullptr) {
+        size_t shortNamePosition = strlen(m_longFileName);
+        while ((shortNamePosition > 0) && (m_longFileName[shortNamePosition - 1] != '/'))
+            shortNamePosition--;
+        m_fileName = m_longFileName + shortNamePosition;
+    }
+    return m_fileName;
 }
 
-void StreamLogContextAbstract::write(const char* s, StreamLogData& data) {
-	std::lock_guard<std::mutex> lock(streamLogContextAbstractOutputMutex);
-	auto file = getFile(data);
-	if (file) {
-		fprintf(file, "%s", s);
-		fflush(file);
-	}
+void StreamLogContextAbstract::write(char const* s, StreamLogData& data) {
+    std::lock_guard<std::mutex> lock(streamLogContextAbstractOutputMutex);
+    auto file = getFile(data);
+    if (file) {
+        fprintf(file, "%s", s);
+        fflush(file);
+    }
 }
 
-static auto loggingStartTime {std::chrono::system_clock::now()};
+static auto loggingStartTime{std::chrono::system_clock::now()};
 
 void getCurrentTime(unsigned int& seconds, unsigned int& milliseconds) {
-	auto elapsedTime = std::chrono::system_clock::now() - loggingStartTime;
-	seconds = std::chrono::duration_cast<std::chrono::seconds>(elapsedTime).count();
-	milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedTime - std::chrono::seconds{seconds}).count();
+    auto elapsedTime = std::chrono::system_clock::now() - loggingStartTime;
+    seconds = std::chrono::duration_cast<std::chrono::seconds>(elapsedTime).count();
+    milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedTime - std::chrono::seconds{seconds}).count();
 }
 
-}
+} // namespace logging
