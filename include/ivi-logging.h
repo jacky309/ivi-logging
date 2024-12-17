@@ -204,39 +204,6 @@ class LogContextT;
 template <template <class...> class ContextTypesClass, class... ContextTypes, template <class...> class ContextDataTypesClass, class... LogDataTypes>
 class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>> : public LogContextCommon {
 
-    struct isEnabledFunctor {
-        isEnabledFunctor(bool& b) : m_isEnabled(b) {
-        }
-        template <typename T>
-        void operator()(T&& t, LogLevel level) {
-            m_isEnabled |= t.isEnabled(level);
-        }
-        bool& m_isEnabled;
-    };
-
-    struct writeFormattedFunctor {
-        template <typename T, typename... Args>
-        void operator()(T&& t, char const* format, Args... args) {
-            if (t.isEnabled()) // We need to check each context here to ensure that we don't send data to a disabled context
-                t.writeFormatted(format, args...);
-        }
-    };
-
-    struct registerContextFunctor {
-        template <typename T>
-        void operator()(T&& t) {
-            t.registerContext();
-        }
-    };
-
-    struct streamFunctor {
-        template <typename T, typename Type>
-        void operator()(T&& t, Type const& v) {
-            if (t.isEnabled()) // We need to check each context here to ensure that we don't send data to a disabled context
-                t << v;
-        }
-    };
-
   public:
     /**
      * Use that typedef to extend a LogContext type by adding a backend to it.
@@ -288,13 +255,19 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
 
         template <typename... Args>
         LogData& writeFormatted(char const* format, Args... args) {
-            for_each_in_tuple_(m_contexts, writeFormattedFunctor(), format, args...);
+            for_each_in_tuple_(m_contexts, [&](auto& log) {
+                if (log.isEnabled()) // We need to check each context here to ensure that we don't send data to a disabled context
+                    log.writeFormatted(format, args...);
+            });
             return *this;
         }
 
         template <typename Type>
         LogData& operator<<(Type const& v) {
-            for_each_in_tuple_(m_contexts, streamFunctor(), v);
+            for_each_in_tuple_(m_contexts, [&](auto& log) {
+                if (log.isEnabled()) // We need to check each context here to ensure that we don't send data to a disabled context
+                    log << v;
+            });
             return *this;
         }
 
@@ -307,18 +280,19 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
         }
 
         void setHexEnabled(bool enabled) {
-            for_each_in_tuple_(m_contexts, [&](auto& d) {
-                d.setHexEnabled(enabled);
+            for_each_in_tuple_(m_contexts, [&](auto& log) {
+                log.setHexEnabled(enabled);
             });
         }
 
+      private:
         std::tuple<LogDataTypes...> m_contexts;
         LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>>& m_context;
     };
 
     LogContextT(std::string const& id, std::string const& contextDescription) : LogContextCommon(id, contextDescription) {
-        for_each_in_tuple_(m_contexts, [&](auto&& t) {
-            t.setParentContext(*this);
+        for_each_in_tuple_(m_contexts, [&](auto& log) {
+            log.setParentContext(*this);
         });
     }
 
@@ -329,14 +303,18 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
     bool isEnabled(LogLevel level) {
         checkContext();
         bool enabled = false;
-        for_each_in_tuple_(m_contexts, isEnabledFunctor(enabled), level);
+        for_each_in_tuple_(m_contexts, [&](auto& log) {
+            enabled |= log.isEnabled(level);
+        });
         return enabled;
     }
 
     void checkContext() {
         if (!m_bRegistered) {
             setDefaultAPPIDSIfNeeded();
-            for_each_in_tuple_(m_contexts, registerContextFunctor());
+            for_each_in_tuple_(m_contexts, [&](auto& log) {
+                log.registerContext();
+            });
             m_bRegistered = true;
         }
     }
