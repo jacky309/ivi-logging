@@ -101,11 +101,7 @@ int generateDataForLogging() {
     return 100;
 }
 
-class MyClass2 {};
-
 int main(int, char const**) {
-
-    log_debug().noFail() << MyClass2{};
 
     log_debug().writeFormatted("This log is using a format string, similar to the printf syntax. This is an int : %i", 345);
     log_error().writeFormatted("Another way to use the printf variant %i", 7345).writeFormatted(". Done");
