@@ -12,13 +12,19 @@ namespace logging {
 static constexpr char const* NULL_POINTER_STRING = "nullptr";
 
 template <typename LogDataType>
-std::enable_if_t<std::is_base_of_v<logging::LogData, LogDataType>, LogDataType&> operator<<(LogDataType& log, StringBuilder const& b) {
+logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, StringBuilder const& b) {
     log << b.str();
     return log;
 }
 
+template <typename LogDataType>
+logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, std::string const& v) {
+    log.write(v);
+    return log;
+}
+
 template <typename EnumType, typename LogDataType>
-std::enable_if_t<std::is_base_of_v<logging::LogData, LogDataType> and std::is_enum_v<EnumType>, LogDataType&> operator<<(LogDataType& log, EnumType const& b) {
+std::enable_if_t<std::is_enum_v<EnumType>, logging::enable_if_logging_type<LogDataType>> operator<<(LogDataType&& log, EnumType const& b) {
     log << static_cast<int>(b);
     return log;
 }

@@ -279,10 +279,6 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
             return *this;
         }
 
-      private:
-        std::tuple<LogDataTypes...> m_contexts;
-        LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>>& m_context;
-
         struct FailSafeLogData {
             FailSafeLogData(LogEntry& logData) : m_logData{logData} {
             }
@@ -299,6 +295,11 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
         FailSafeLogData& noFail() {
             return m_protectedLogData;
         }
+
+      private:
+        std::tuple<LogDataTypes...> m_contexts;
+        LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>>& m_context;
+
         FailSafeLogData m_protectedLogData{*this};
     };
 
@@ -335,8 +336,14 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
     bool m_bRegistered = false;
 };
 
+template <typename Type>
+static constexpr bool isNativeType() {
+    using RawType = std::remove_reference_t<std::remove_cv_t<std::remove_const_t<Type>>>;
+    return (std::is_integral_v<RawType> or std::is_floating_point_v<RawType> or std::is_pointer_v<RawType> or std::is_same_v<RawType, std::string_view>);
+}
+
 template <typename LogDataType, typename ValueType>
-enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, ValueType const& v) {
+std::enable_if_t<logging::isNativeType<ValueType>(), logging::enable_if_logging_type<LogDataType>> operator<<(LogDataType&& log, ValueType const& v) {
     log.write(v);
     return log;
 }

@@ -1,5 +1,7 @@
 find_package(PkgConfig REQUIRED)
 
+message("ivi-logging found in PATH ${CMAKE_CURRENT_LIST_DIR}")
+
 add_library(ivi-logging-dependencies INTERFACE IMPORTED)
 
 foreach(DEPENDENCY @ADDITIONAL_PKGCONFIG_DEPENDENCIES@)

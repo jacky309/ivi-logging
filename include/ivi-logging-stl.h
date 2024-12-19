@@ -58,7 +58,7 @@ logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, std::
 }
 
 template <typename KeyType, typename ValueType, class LogDataType>
-logging::enable_if_logging_type<LogDataType> operator<<(LogDataType& log, std::unordered_map<KeyType, ValueType> const& v) {
+logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, std::unordered_map<KeyType, ValueType> const& v) {
     return streamArrayType(log, v);
 }
 
@@ -113,7 +113,7 @@ logging::enable_if_logging_type<LogDataType> flush(LogDataType&& log) {
 namespace logging {
 
 template <typename ElementType, std::size_t Extent, typename LogDataType>
-logging::enable_if_logging_type<LogDataType> operator<<(LogDataType& log, std::span<ElementType, Extent> const& v) {
+logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, std::span<ElementType, Extent> const& v) {
     return streamArrayType(log, v);
 }
 
