@@ -11,7 +11,7 @@ static int const DURATION = 1000;
 
 void loop(char const* threadName) {
     for (int i = DURATION; i > 0; i--) {
-        log_debug() << "Hello from " << threadName;
+        log_info() << "Hello from " << threadName;
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 }
@@ -29,7 +29,7 @@ void thread2() {
 }
 
 int main(int, char**) {
-    log_debug() << "Hello from main thread";
+    log_info() << "Hello from main thread";
     std::thread t1(thread1);
     std::thread t2(thread2);
     t1.join();

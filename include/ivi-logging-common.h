@@ -137,12 +137,21 @@ class LogInfo {
         return m_prettyFunction;
     }
 
+    bool isHexEnabled() const {
+        return m_hexEnabled;
+    }
+
+    void setHexEnabled(bool enabled) {
+        m_hexEnabled = enabled;
+    }
+
   private:
     char const* m_longFileName;
     mutable char const* m_fileName = nullptr;
     char const* m_prettyFunction;
     int m_lineNumber;
     LogLevel m_level;
+    bool m_hexEnabled{false};
 };
 
 class LogData {};

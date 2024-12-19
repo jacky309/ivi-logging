@@ -24,7 +24,17 @@ class DltContextClass : public LogContextBase, private DltContext {
         m_context = &context;
     }
 
-    bool isEnabled(LogLevel logLevel) const;
+    bool isEnabled(LogLevel logLevel) const {
+
+#ifdef DLT_2_9
+        DltContextData d;
+        return dlt_user_log_write_start(this, &d, getDLTLogLevel(logLevel));
+#else
+        auto dltLogLevel = getDLTLogLevel(logLevel);
+        return ((this)->log_level_ptr && ((dltLogLevel) <= (int)*((this)->log_level_ptr)) &&
+                ((dltLogLevel) != 0)); // TODO: get that expression from the DLT itself
+#endif
+    }
 
     static DltLogLevelType getDLTLogLevel(LogLevel level) {
         DltLogLevelType v = DLT_LOG_DEFAULT;
@@ -112,7 +122,7 @@ class DltLogData : public LogData, public DltContextData {
     }
 
     void init(DltContextClass& context, LogInfo const& data) {
-        m_data = data;
+        m_data = &data;
         m_context = &context;
         auto dltLogLevel = m_context->getDLTLogLevel(getData().getLogLevel());
         m_enabled = (dlt_user_log_write_start(m_context, this, dltLogLevel) > 0);
@@ -141,11 +151,15 @@ class DltLogData : public LogData, public DltContextData {
     }
 
     LogInfo const& getData() const {
-        return m_data;
+        return *m_data;
     }
 
     bool isEnabled() const {
         return m_enabled;
+    }
+
+    bool isHexEnabled() const {
+        return m_data->isHexEnabled();
     }
 
     template <typename... Args>
@@ -163,136 +177,99 @@ class DltLogData : public LogData, public DltContextData {
         }
     }
 
-    void setHexEnabled(bool enabled) {
-        m_hexEnabled = enabled;
+    void write(bool v) {
+        dlt_user_log_write_bool(this, v);
     }
 
-    bool isHexEnabled() const {
-        return m_hexEnabled;
+    void write(char const* v) {
+        dlt_user_log_write_utf8_string(this, v);
     }
 
-  private:
-    DltContextClass* m_context = nullptr;
-    LogInfo m_data;
-    bool m_enabled = false;
-    bool m_hexEnabled{false};
-};
+    template <size_t N>
+    void write(char const (&v)[N]) {
+        write(string_view(v));
+    }
 
-inline bool DltContextClass::isEnabled(LogLevel logLevel) const {
-#ifdef DLT_2_9
-    DltContextData d;
-    return dlt_user_log_write_start(this, &d, getDLTLogLevel(logLevel));
-#else
-    auto dltLogLevel = getDLTLogLevel(logLevel);
-    return ((this)->log_level_ptr && ((dltLogLevel) <= (int)*((this)->log_level_ptr)) && ((dltLogLevel) != 0)); // TODO: get that expression from the DLT itself
-#endif
-}
+    void write(std::string_view v) {
+        writeFormatted("%.*s", static_cast<int>(v.length()), v.data());
+    }
 
-inline DltLogData& operator<<(DltLogData& data, bool v) {
-    dlt_user_log_write_bool(&data, v);
-    return data;
-}
+    void write(std::string const& v) {
+        write(v.c_str());
+    }
 
-inline DltLogData& operator<<(DltLogData& data, char const* v) {
-    dlt_user_log_write_utf8_string(&data, v);
-    return data;
-}
-
-template <size_t N>
-inline DltLogData& operator<<(DltLogData& data, char const (&v)[N]) {
-    data << (char const*)v;
-    return data;
-}
-
-inline DltLogData& operator<<(DltLogData& data, std::string_view v) {
-    if (data.isEnabled())
-        data.writeFormatted("%.*s", static_cast<int>(v.length()), v.data());
-    return data;
-}
-
-inline DltLogData& operator<<(DltLogData& data, std::string const& v) {
-    data << v.c_str();
-    return data;
-}
-
-inline DltLogData& operator<<(DltLogData& data, float f) {
-    // we assume a float is 32 bits
-    dlt_user_log_write_float32(&data, f);
-    return data;
-}
+    void write(float f) {
+        // we assume a float is 32 bits
+        dlt_user_log_write_float32(this, f);
+    }
 
 // TODO : strangely, it seems like none of the types defined in "stdint.h" is equivalent to "long int" on a 32 bits platform
 #if __WORDSIZE == 32
-inline DltLogData& operator<<(DltLogData& data, long int v) {
-    dlt_user_log_write_int32(&data, v);
-    return data;
-}
-inline DltLogData& operator<<(DltLogData& data, unsigned long int v) {
-    dlt_user_log_write_uint32(&data, v);
-    return data;
-}
+    void write(long int v) {
+        dlt_user_log_write_int32(this, v);
+    }
+    void write(unsigned long int v) {
+        dlt_user_log_write_uint32(this, v);
+    }
 #endif
 
-inline DltLogData& operator<<(DltLogData& data, double f) {
-    // we assume a double is 64 bits
-    dlt_user_log_write_float64(&data, f);
-    return data;
-}
-
-inline DltLogData& operator<<(DltLogData& data, uint64_t v) {
-    if (data.isHexEnabled()) {
-        dlt_user_log_write_uint64_formatted(&data, v, DLT_FORMAT_HEX64);
-    } else {
-        dlt_user_log_write_uint64(&data, v);
+    void write(double f) {
+        // we assume a double is 64 bits
+        dlt_user_log_write_float64(this, f);
     }
-    return data;
-}
 
-inline DltLogData& operator<<(DltLogData& data, int64_t v) {
-    dlt_user_log_write_int64(&data, v);
-    return data;
-}
-
-inline DltLogData& operator<<(DltLogData& data, uint32_t v) {
-    if (data.isHexEnabled()) {
-        dlt_user_log_write_uint32_formatted(&data, v, DLT_FORMAT_HEX32);
-    } else {
-        dlt_user_log_write_uint32(&data, v);
+    void write(uint64_t v) {
+        if (isHexEnabled()) {
+            dlt_user_log_write_uint64_formatted(this, v, DLT_FORMAT_HEX64);
+        } else {
+            dlt_user_log_write_uint64(this, v);
+        }
     }
-    return data;
-}
 
-inline DltLogData& operator<<(DltLogData& data, int32_t v) {
-    dlt_user_log_write_int32(&data, v);
-    return data;
-}
-
-inline DltLogData& operator<<(DltLogData& data, uint16_t v) {
-    if (data.isHexEnabled()) {
-        dlt_user_log_write_uint16_formatted(&data, v, DLT_FORMAT_HEX16);
-    } else {
-        dlt_user_log_write_uint16(&data, v);
+    void write(int64_t v) {
+        dlt_user_log_write_int64(this, v);
     }
-    return data;
-}
 
-inline DltLogData& operator<<(DltLogData& data, int16_t v) {
-    dlt_user_log_write_int16(&data, v);
-    return data;
-}
-
-inline DltLogData& operator<<(DltLogData& data, uint8_t v) {
-    if (data.isHexEnabled()) {
-        dlt_user_log_write_uint8_formatted(&data, v, DLT_FORMAT_HEX8);
-    } else {
-        dlt_user_log_write_uint8(&data, v);
+    void write(uint32_t v) {
+        if (isHexEnabled()) {
+            dlt_user_log_write_uint32_formatted(this, v, DLT_FORMAT_HEX32);
+        } else {
+            dlt_user_log_write_uint32(this, v);
+        }
     }
-    return data;
-}
 
-inline DltLogData& operator<<(DltLogData& data, int8_t v) {
-    dlt_user_log_write_int8(&data, v);
-    return data;
-}
+    void write(int32_t v) {
+        dlt_user_log_write_int32(this, v);
+    }
+
+    void write(uint16_t v) {
+        if (isHexEnabled()) {
+            dlt_user_log_write_uint16_formatted(this, v, DLT_FORMAT_HEX16);
+        } else {
+            dlt_user_log_write_uint16(this, v);
+        }
+    }
+
+    void write(int16_t v) {
+        dlt_user_log_write_int16(this, v);
+    }
+
+    void write(uint8_t v) {
+        if (isHexEnabled()) {
+            dlt_user_log_write_uint8_formatted(this, v, DLT_FORMAT_HEX8);
+        } else {
+            dlt_user_log_write_uint8(this, v);
+        }
+    }
+
+    void write(int8_t v) {
+        dlt_user_log_write_int8(this, v);
+    }
+
+  private:
+    DltContextClass* m_context{};
+    LogInfo const* m_data{};
+    bool m_enabled{false};
+};
 
 } // namespace logging

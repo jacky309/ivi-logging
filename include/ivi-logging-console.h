@@ -2,6 +2,7 @@
 
 #include "ivi-logging-common.h"
 #include "ivi-logging-utils.h"
+#include <string_view>
 
 namespace logging {
 
@@ -101,7 +102,7 @@ class ConsoleLogContext : public StreamLogContextAbstract {
 
 void getCurrentTime(unsigned int& seconds, unsigned int& milliseconds);
 
-class StreamLogData : public LogData {
+class StreamLogData {
 
   public:
     static constexpr char const* DEFAULT_PREFIX = "%05d.%03d | %4.4s [%s] "; // with timestamp
@@ -136,13 +137,15 @@ class StreamLogData : public LogData {
         m_suffixFormat = format;
     }
 
-    void init(StreamLogContextAbstract& aContext, LogInfo& data) {
+    void init(StreamLogContextAbstract& aContext, LogInfo const& data) {
         m_context = &aContext;
-        m_data = data;
+        m_data = &data;
 
         if (isEnabled())
             writePrefix();
     }
+
+    //   const logging::LogData *m_logData;
 
     virtual void writePrefix() {
         unsigned int seconds, milliseconds;
@@ -203,7 +206,7 @@ class StreamLogData : public LogData {
     }
 
     LogInfo const& getData() const {
-        return m_data;
+        return *m_data;
     }
 
     template <typename... Args>
@@ -215,11 +218,11 @@ class StreamLogData : public LogData {
     }
 
     StreamLogData& writeInt(int value) {
-        return writeFormatted(m_hexEnabled ? "%X" : "%d", value);
+        return writeFormatted(isHexEnabled() ? "%X" : "%d", value);
     }
 
     StreamLogData& writeInt(unsigned int value) {
-        return writeFormatted(m_hexEnabled ? "%X" : "%u", value);
+        return writeFormatted(isHexEnabled() ? "%X" : "%u", value);
     }
 
     template <typename... Args>
@@ -239,19 +242,88 @@ class StreamLogData : public LogData {
 #pragma GCC diagnostic pop
     }
 
-    void setHexEnabled(bool enabled) {
-        m_hexEnabled = enabled;
+    bool isHexEnabled() const {
+        return m_data->isHexEnabled();
     }
 
-    bool isHexEnabled() const {
-        return m_hexEnabled;
+    void write(std::string_view v) {
+        writeFormatted("%.*s", static_cast<int>(v.length()), v.data());
+    }
+
+    void write(bool v) {
+        writeFormatted("%s", v ? "true" : "false");
+    }
+
+    void write(char v) {
+        writeInt(v);
+    }
+
+    void write(unsigned char v) {
+        writeInt(v);
+    }
+
+    void write(signed short v) {
+        writeInt(v);
+    }
+
+    void write(unsigned short v) {
+        writeInt(v);
+    }
+
+    void write(signed int v) {
+        writeInt(v);
+    }
+
+    void write(unsigned int v) {
+        writeInt(v);
+    }
+
+    void write(long long v) {
+        writeFormatted(isHexEnabled() ? "%llX" : "%lld", v);
+    }
+
+    void write(unsigned long long v) {
+        writeFormatted(isHexEnabled() ? "%llX" : "%llu", v);
+    }
+
+    void write(signed long v) {
+        writeFormatted(isHexEnabled() ? "%lX" : "%ld", v);
+    }
+
+    void write(unsigned long v) {
+        writeFormatted(isHexEnabled() ? "%lX" : "%lu", v);
+    }
+
+    template <typename Type>
+    void write(Type const* v) {
+        writeFormatted("%s", pointerToString(v).c_str());
+    }
+
+    void write(char const* v) {
+        writeFormatted("%s", v ? v : "null");
+    }
+
+    template <size_t N>
+    void write(char const (&v)[N]) {
+        write((char const*)v);
+    }
+
+    void write(float v) {
+        writeFormatted("%f", v);
+    }
+
+    void write(std::string const& s) {
+        writeFormatted("%s", s.c_str());
+    }
+
+    void write(double v) {
+        writeFormatted("%f", v);
     }
 
   protected:
-    ContextType* m_context = nullptr;
+    ContextType* m_context{};
+    LogInfo const* m_data{};
     ByteArray m_content;
-    LogInfo m_data;
-    bool m_hexEnabled{false};
 
     char const* m_prefixFormat = DEFAULT_PREFIX;
     //	const char* m_suffixFormat = DEFAULT_SUFFIX_WITHOUT_FILE_LOCATION;
@@ -267,81 +339,6 @@ inline FILE* ConsoleLogContext::getFile(StreamLogData& data) {
         return stdout;
 }
 
-inline StreamLogData& operator<<(StreamLogData& data, std::string_view v) {
-    return data.writeFormatted("%.*s", static_cast<int>(v.length()), v.data());
-}
-
-inline StreamLogData& operator<<(StreamLogData& data, bool v) {
-    return data.writeFormatted("%s", v ? "true" : "false");
-}
-
-inline StreamLogData& operator<<(StreamLogData& data, char v) {
-    return data.writeInt(v);
-}
-
-inline StreamLogData& operator<<(StreamLogData& data, unsigned char v) {
-    return data.writeInt(v);
-}
-
-inline StreamLogData& operator<<(StreamLogData& data, signed short v) {
-    return data.writeInt(v);
-}
-
-inline StreamLogData& operator<<(StreamLogData& data, unsigned short v) {
-    return data.writeInt(v);
-}
-
-inline StreamLogData& operator<<(StreamLogData& data, signed int v) {
-    return data.writeInt(v);
-}
-
-inline StreamLogData& operator<<(StreamLogData& data, unsigned int v) {
-    return data.writeInt(v);
-}
-
-inline StreamLogData& operator<<(StreamLogData& data, long long v) {
-    return data.writeFormatted(data.isHexEnabled() ? "%llX" : "%lld", v);
-}
-
-inline StreamLogData& operator<<(StreamLogData& data, unsigned long long v) {
-    return data.writeFormatted(data.isHexEnabled() ? "%llX" : "%llu", v);
-}
-
-inline StreamLogData& operator<<(StreamLogData& data, signed long v) {
-    return data.writeFormatted(data.isHexEnabled() ? "%lX" : "%ld", v);
-}
-
-inline StreamLogData& operator<<(StreamLogData& data, unsigned long v) {
-    return data.writeFormatted(data.isHexEnabled() ? "%lX" : "%lu", v);
-}
-
-template <typename Type>
-inline StreamLogData& operator<<(StreamLogData& data, Type const* v) {
-    return data.writeFormatted("%s", pointerToString(v).c_str());
-}
-
-inline StreamLogData& operator<<(StreamLogData& data, char const* v) {
-    return data.writeFormatted("%s", v ? v : "null");
-}
-
-template <size_t N>
-inline StreamLogData& operator<<(StreamLogData& data, char const (&v)[N]) {
-    data << (char const*)v;
-    return data;
-}
-
-inline StreamLogData& operator<<(StreamLogData& data, float v) {
-    return data.writeFormatted("%f", v);
-}
-
-inline StreamLogData& operator<<(StreamLogData& data, std::string const& s) {
-    return data.writeFormatted("%s", s.c_str());
-}
-
-inline StreamLogData& operator<<(StreamLogData& data, double v) {
-    return data.writeFormatted("%f", v);
-}
-
 class ConsoleLogData : public StreamLogData {
 
   public:
@@ -351,7 +348,7 @@ class ConsoleLogData : public StreamLogData {
         flushLog();
     }
 
-    void init(ContextType& aContext, LogInfo& data) {
+    void init(ContextType& aContext, LogInfo const& data) {
         m_context = &aContext;
         StreamLogData::init(aContext, data);
     }
@@ -418,7 +415,7 @@ class ConsoleLogData : public StreamLogData {
                 s = ANSI_COLOR_OFF;
                 break;
         }
-        *this << s;
+        write(s);
         m_invisibleCharacterCount += s.length();
     }
 
@@ -432,7 +429,7 @@ class ConsoleLogData : public StreamLogData {
 
         std::string s = ANSI_COLOR_OFF;
         s += ANSI_RESET_BRIGHT;
-        *this << s;
+        write(s);
         m_invisibleCharacterCount += s.length();
     }
 

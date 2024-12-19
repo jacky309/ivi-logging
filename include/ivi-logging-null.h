@@ -24,6 +24,10 @@ class NullLogData : public LogData {
     template <typename... Args>
     void writeFormatted(char const*, Args...) {
     }
+
+    template <typename Type>
+    void write(Type const&) {
+    }
 };
 
 class NullLogContext {
@@ -41,32 +45,5 @@ class NullLogContext {
     void registerContext() {
     }
 };
-
-template <typename Type>
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] Type const* v) {
-    return data;
-}
-
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] bool v) {
-    return data;
-}
-
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] char const* v) {
-    return data;
-}
-
-template <size_t N>
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] char const (&v)[N]) {
-    return data;
-}
-
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] std::string const& v) {
-    return data;
-}
-
-template <typename T, typename = typename std::enable_if<std::is_fundamental_v<T>>::type>
-inline NullLogData& operator<<(NullLogData& data, [[maybe_unused]] const T& v) {
-    return data;
-}
 
 } // namespace logging

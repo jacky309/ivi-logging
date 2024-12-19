@@ -20,9 +20,9 @@ template <size_t I = 0, typename Func, typename... TupleTypes, typename... CallA
 }
 
 inline std::string pointerToString(void const* p) {
-    char buffer[64];
-    snprintf(buffer, sizeof(buffer), "0x%zX", (size_t)p);
-    return buffer;
+    std::array<char, 64> buffer{};
+    snprintf(buffer.data(), buffer.size(), "0x%zX", reinterpret_cast<size_t>(p));
+    return buffer.data();
 }
 
 class StringBuilder {
@@ -201,6 +201,9 @@ struct TypeSet {};
 template <class, class>
 class LogContextT;
 
+template <typename Type>
+using enable_if_logging_type = std::enable_if_t<std::is_base_of_v<logging::LogData, std::remove_reference_t<Type>>, Type&>;
+
 template <template <class...> class ContextTypesClass, class... ContextTypes, template <class...> class ContextDataTypesClass, class... LogDataTypes>
 class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>> : public LogContextCommon {
 
@@ -212,7 +215,7 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
     using Extension =
         typename LogContextT<ContextTypesClass<ContextTypes..., ExtraContextType>, ContextDataTypesClass<LogDataTypes..., ExtraDataType>>::LogContextT;
 
-    class LogData : LogInfo {
+    class LogEntry : public LogData, public LogInfo {
 
         template <size_t I = 0, typename... CallArgumentTypes>
         typename std::enable_if<I == sizeof...(ContextTypes)>::type
@@ -231,30 +234,36 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
         }
 
       public:
-        LogData(LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>>& context, LogLevel level, char const* fileName,
-                int lineNumber, char const* prettyFunction)
+        LogEntry(LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>>& context, LogLevel level, char const* fileName,
+                 int lineNumber, char const* prettyFunction)
             : LogInfo(level, fileName, lineNumber, prettyFunction), m_context(context) {
             for_each_init(m_contexts, context, *this);
         }
 
-        ~LogData() {
+        ~LogEntry() {
         }
 
-        LogData& write() {
-            return *this;
+        template <class F, class... Args>
+        static void for_each_argument(F f, Args&&... args) {
+            [](...) {
+            }((f(std::forward<Args>(args)), 0)...);
         }
 
-        template <typename Arg1, typename... Args>
-        LogData& write(Arg1 const& firstArg, Args const&... remainingArguments) {
-            if (m_context.isEnabled(getLogLevel())) {
-                *this << firstArg;
-                return write(remainingArguments...);
-            }
+        template <typename... Args>
+        LogEntry& write(Args const&... args) {
+            for_each_in_tuple_(m_contexts, [&](auto& log) {
+                if (log.isEnabled()) // We need to check each context here to ensure that we don't send data to a disabled context
+                    for_each_argument(
+                        [&](auto&& arg) {
+                            log.write(arg);
+                        },
+                        args...);
+            });
             return *this;
         }
 
         template <typename... Args>
-        LogData& writeFormatted(char const* format, Args... args) {
+        LogEntry& writeFormatted(char const* format, Args... args) {
             for_each_in_tuple_(m_contexts, [&](auto& log) {
                 if (log.isEnabled()) // We need to check each context here to ensure that we don't send data to a disabled context
                     log.writeFormatted(format, args...);
@@ -262,32 +271,35 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
             return *this;
         }
 
-        template <typename Type>
-        LogData& operator<<(Type const& v) {
-            for_each_in_tuple_(m_contexts, [&](auto& log) {
-                if (log.isEnabled()) // We need to check each context here to ensure that we don't send data to a disabled context
-                    log << v;
-            });
-            return *this;
-        }
-
         /**
          * Used to support std::endl, std::ends, etc...
          */
-        LogData& operator<<(LogData& (*functionPtr)(LogData&)) {
+        LogEntry& operator<<(LogEntry& (*functionPtr)(LogEntry&)) {
             functionPtr(*this);
             return *this;
-        }
-
-        void setHexEnabled(bool enabled) {
-            for_each_in_tuple_(m_contexts, [&](auto& log) {
-                log.setHexEnabled(enabled);
-            });
         }
 
       private:
         std::tuple<LogDataTypes...> m_contexts;
         LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>>& m_context;
+
+        struct FailSafeLogData {
+            FailSafeLogData(LogEntry& logData) : m_logData{logData} {
+            }
+
+            template <typename Type>
+            FailSafeLogData& operator<<(Type const&) {
+                //                				for_each_in_tuple_(m_contexts, streamFunctor(), v);
+                return *this;
+            }
+
+            LogEntry& m_logData;
+        };
+
+        FailSafeLogData& noFail() {
+            return m_protectedLogData;
+        }
+        FailSafeLogData m_protectedLogData{*this};
     };
 
     LogContextT(std::string const& id, std::string const& contextDescription) : LogContextCommon(id, contextDescription) {
@@ -296,14 +308,14 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
         });
     }
 
-    LogData createLog(LogLevel level, char const* fileName, int lineNumber, char const* prettyFunction) {
-        return LogData(*this, level, fileName, lineNumber, prettyFunction);
+    LogEntry createLog(LogLevel level, char const* fileName, int lineNumber, char const* prettyFunction) {
+        return LogEntry(*this, level, fileName, lineNumber, prettyFunction);
     }
 
     bool isEnabled(LogLevel level) {
         checkContext();
         bool enabled = false;
-        for_each_in_tuple_(m_contexts, [&](auto& log) {
+        for_each_in_tuple_(m_contexts, [&](auto const& log) {
             enabled |= log.isEnabled(level);
         });
         return enabled;
@@ -322,6 +334,12 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
     std::tuple<ContextTypes...> m_contexts;
     bool m_bRegistered = false;
 };
+
+template <typename LogDataType, typename ValueType>
+enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, ValueType const& v) {
+    log.write(v);
+    return log;
+}
 
 /**
  * Use this context definition to completely disable the logging
