@@ -154,8 +154,6 @@ class LogInfo {
     bool m_hexEnabled{false};
 };
 
-class LogData {};
-
 std::string getStackTrace(size_t max_frames = 63);
 
 } // namespace logging

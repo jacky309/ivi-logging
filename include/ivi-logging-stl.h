@@ -13,8 +13,8 @@
 
 namespace logging {
 
-template <typename MapType, class LogDataType>
-LogDataType& streamMapType(LogDataType& log, MapType const& v) {
+template <typename MapType, class LogType>
+LogType& streamMapType(LogType& log, MapType const& v) {
     bool isFirst = true;
     log << " [ ";
     for (auto& element : v) {
@@ -32,8 +32,8 @@ LogDataType& streamMapType(LogDataType& log, MapType const& v) {
     return log;
 }
 
-template <typename ArrayType, class LogDataType>
-LogDataType& streamArrayType(LogDataType& log, ArrayType const& v) {
+template <typename ArrayType, class LogType>
+LogType& streamArrayType(LogType& log, ArrayType const& v) {
     bool isFirst = true;
     log << " [ ";
     for (auto& element : v) {
@@ -47,29 +47,41 @@ LogDataType& streamArrayType(LogDataType& log, ArrayType const& v) {
     return log;
 }
 
-template <typename ElementType, class LogDataType>
-logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, std::vector<ElementType> const& v) {
+template <typename ElementType, class LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::vector<ElementType> const& v) {
     return streamArrayType(log, v);
 }
 
-template <typename KeyType, typename ValueType, class LogDataType>
-logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, std::map<KeyType, ValueType> const& v) {
+template <typename KeyType, typename ValueType, class LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::map<KeyType, ValueType> const& v) {
     return streamMapType(log, v);
 }
 
-template <typename KeyType, typename ValueType, class LogDataType>
-logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, std::unordered_map<KeyType, ValueType> const& v) {
+template <typename KeyType, typename ValueType, class LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::unordered_map<KeyType, ValueType> const& v) {
     return streamArrayType(log, v);
 }
 
-template <typename ElementType, std::size_t Extent, class LogDataType>
-logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, std::array<ElementType, Extent> const& v) {
+template <typename ElementType, std::size_t Extent, class LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::array<ElementType, Extent> const& v) {
     return streamArrayType(log, v);
 }
 
-template <typename LogDataType>
-logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, std::exception const& ex) {
+template <typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::exception const& ex) {
     log << ex.what();
+    return log;
+}
+
+template <typename ElementType, size_t N, typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, ElementType const (&v)[N]) {
+    streamArrayType(log, v);
+    return log;
+}
+
+template <size_t N, typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, char const (&v)[N]) {
+    log << std::string_view{v};
     return log;
 }
 
@@ -77,32 +89,30 @@ logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, std::
 
 namespace std {
 
-template <typename LogDataType>
-logging::enable_if_logging_type<LogDataType> endl(LogDataType&& log) {
+template <typename LogType>
+logging::enable_if_logging_type<LogType> endl(LogType&& log) {
     log << "\n";
     return log;
 }
 
-template <typename LogDataType>
-logging::enable_if_logging_type<LogDataType> hex(LogDataType&& log) {
+template <typename LogType>
+logging::enable_if_logging_type<LogType> hex(LogType&& log) {
     log.setHexEnabled(true);
     return log;
 }
-template <typename LogDataType>
-logging::enable_if_logging_type<LogDataType> dec(LogDataType&& log) {
+template <typename LogType>
+logging::enable_if_logging_type<LogType> dec(LogType&& log) {
     log.setHexEnabled(false);
     return log;
 }
 
-template <typename LogDataType>
-logging::enable_if_logging_type<LogDataType> ends(LogDataType&& log) {
-    // TODO : implement
+template <typename LogType>
+logging::enable_if_logging_type<LogType> ends(LogType&& log) {
     return log;
 }
 
-template <typename LogDataType>
-logging::enable_if_logging_type<LogDataType> flush(LogDataType&& log) {
-    // TODO : implement
+template <typename LogType>
+logging::enable_if_logging_type<LogType> flush(LogType&& log) {
     return log;
 }
 
@@ -112,8 +122,8 @@ logging::enable_if_logging_type<LogDataType> flush(LogDataType&& log) {
 #include <span>
 namespace logging {
 
-template <typename ElementType, std::size_t Extent, typename LogDataType>
-logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, std::span<ElementType, Extent> const& v) {
+template <typename ElementType, std::size_t Extent, typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::span<ElementType, Extent> const& v) {
     return streamArrayType(log, v);
 }
 

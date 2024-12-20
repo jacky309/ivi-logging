@@ -201,12 +201,13 @@ struct TypeSet {};
 template <class, class>
 class LogContextT;
 
-struct FailSafe {};
+class LogData {};
+
+struct LogNoFailBase {};
 
 template <typename Type>
-using enable_if_logging_type =
-    std::enable_if_t<std::is_base_of_v<logging::LogData, std::remove_reference_t<Type>> or std::is_base_of_v<logging::FailSafe, std::remove_reference_t<Type>>,
-                     Type&>;
+using enable_if_logging_type = std::enable_if_t<
+    std::is_base_of_v<logging::LogData, std::remove_reference_t<Type>> or std::is_base_of_v<logging::LogNoFailBase, std::remove_reference_t<Type>>, Type&>;
 
 template <template <class...> class ContextTypesClass, class... ContextTypes, template <class...> class ContextDataTypesClass, class... LogDataTypes>
 class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>> : public LogContextCommon {
@@ -283,8 +284,8 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
             return *this;
         }
 
-        struct FailSafeLogData : public FailSafe {
-            FailSafeLogData(LogEntry& logData) : m_logData{logData} {
+        struct LogNoFail : public LogNoFailBase {
+            LogNoFail(LogEntry& logData) : m_logData{logData} {
             }
 
             template <typename Type>
@@ -292,10 +293,19 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
                 m_logData.write(value);
             }
 
+            void writeUnsupported() {
+                m_logData.write(m_unsupportedText);
+            }
+
             LogEntry& m_logData;
+            std::string_view m_unsupportedText;
         };
 
-        FailSafeLogData& noFail() {
+        /**
+         * Enables using types which are not supported for logging, without getting a compile error
+         */
+        LogNoFail& noFail(char const* unsupportedText = "XXX") {
+            m_protectedLogData.m_unsupportedText = unsupportedText;
             return m_protectedLogData;
         }
 
@@ -303,7 +313,7 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
         std::tuple<LogDataTypes...> m_contexts;
         LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>>& m_context;
 
-        FailSafeLogData m_protectedLogData{*this};
+        LogNoFail m_protectedLogData{*this};
     };
 
     LogContextT(std::string const& id, std::string const& contextDescription) : LogContextCommon(id, contextDescription) {
@@ -345,9 +355,8 @@ static constexpr bool isNativeType() {
     return (std::is_integral_v<RawType> or std::is_floating_point_v<RawType> or std::is_pointer_v<RawType> or std::is_same_v<RawType, std::string_view>);
 }
 
-template <typename LogDataType, typename ValueType>
-std::enable_if_t<logging::isNativeType<ValueType>() and std::is_base_of_v<logging::LogData, std::remove_reference_t<LogDataType>>, LogDataType&>
-operator<<(LogDataType&& log, ValueType const& v) {
+template <typename LogType, typename ValueType>
+std::enable_if_t<logging::isNativeType<ValueType>(), logging::enable_if_logging_type<LogType>> operator<<(LogType&& log, ValueType const& v) {
     log.write(v);
     return log;
 }
@@ -358,20 +367,11 @@ struct has_logging_support : std::false_type {};
 template <typename ValueType, typename StreamType>
 struct has_logging_support<ValueType, StreamType, decltype(void(std::declval<StreamType&>() << std::declval<ValueType const&>()))> : ::std::true_type {};
 
-template <typename Type>
-using enable_if_fail_safe_logging_type = std::enable_if_t<std::is_base_of_v<logging::FailSafe, std::remove_reference_t<Type>>, Type&>;
-
-template <typename LogDataType, typename ValueType>
-std::enable_if_t<not logging::isNativeType<ValueType>() and not has_logging_support<ValueType, LogDataType>::value,
-                 logging::enable_if_fail_safe_logging_type<LogDataType>>
-operator<<(LogDataType&& log, ValueType const&) {
-    log.write("XXX");
-    return log;
-}
-
-template <typename LogDataType, typename ValueType>
-std::enable_if_t<logging::isNativeType<ValueType>(), logging::enable_if_fail_safe_logging_type<LogDataType>> operator<<(LogDataType&& log, ValueType const& v) {
-    log.write(v);
+template <typename LogType, typename ValueType>
+std::enable_if_t<not logging::isNativeType<ValueType>() and not has_logging_support<ValueType, LogType>::value,
+                 std::enable_if_t<std::is_base_of_v<logging::LogNoFailBase, std::remove_reference_t<LogType>>, LogType&>>
+operator<<(LogType&& log, ValueType const&) {
+    log.writeUnsupported();
     return log;
 }
 

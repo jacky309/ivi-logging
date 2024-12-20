@@ -303,11 +303,6 @@ class StreamLogData {
         writeFormatted("%s", v ? v : "null");
     }
 
-    template <size_t N>
-    void write(char const (&v)[N]) {
-        write((char const*)v);
-    }
-
     void write(float v) {
         writeFormatted("%f", v);
     }

@@ -185,11 +185,6 @@ class DltLogData : public LogData, public DltContextData {
         dlt_user_log_write_utf8_string(this, v);
     }
 
-    template <size_t N>
-    void write(char const (&v)[N]) {
-        write(string_view(v));
-    }
-
     void write(std::string_view v) {
         writeFormatted("%.*s", static_cast<int>(v.length()), v.data());
     }

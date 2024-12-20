@@ -11,33 +11,33 @@ namespace logging {
 
 static constexpr char const* NULL_POINTER_STRING = "nullptr";
 
-template <typename LogDataType>
-logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, StringBuilder const& b) {
+template <typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, StringBuilder const& b) {
     log << b.str();
     return log;
 }
 
-template <typename LogDataType>
-logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, std::string const& v) {
+template <typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::string const& v) {
     log.write(v);
     return log;
 }
 
-template <typename TupType, class LogDataType, size_t... I>
-void printTuple(TupType const& _tup, LogDataType& log, std::index_sequence<I...>) {
+template <typename TupType, class LogType, size_t... I>
+void printTuple(TupType const& _tup, LogType& log, std::index_sequence<I...>) {
     log << "{";
     (..., (log << (I == 0 ? "" : ", ") << std::get<I>(_tup)));
     log << "}";
 }
 
-template <typename LogDataType, typename... TupleTypes>
-logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, std::tuple<TupleTypes...> const& value) {
+template <typename LogType, typename... TupleTypes>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::tuple<TupleTypes...> const& value) {
     printTuple(value, log, std::make_index_sequence<sizeof...(TupleTypes)>());
     return log;
 }
 
-template <typename EnumType, typename LogDataType>
-std::enable_if_t<std::is_enum_v<EnumType>, logging::enable_if_logging_type<LogDataType>> operator<<(LogDataType&& log, EnumType const& b) {
+template <typename EnumType, typename LogType>
+std::enable_if_t<std::is_enum_v<EnumType>, logging::enable_if_logging_type<LogType>> operator<<(LogType&& log, EnumType const& b) {
     log << static_cast<int>(b);
     return log;
 }
