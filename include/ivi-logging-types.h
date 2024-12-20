@@ -23,6 +23,19 @@ logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, std::
     return log;
 }
 
+template <typename TupType, class LogDataType, size_t... I>
+void printTuple(TupType const& _tup, LogDataType& log, std::index_sequence<I...>) {
+    log << "{";
+    (..., (log << (I == 0 ? "" : ", ") << std::get<I>(_tup)));
+    log << "}";
+}
+
+template <typename LogDataType, typename... TupleTypes>
+logging::enable_if_logging_type<LogDataType> operator<<(LogDataType&& log, std::tuple<TupleTypes...> const& value) {
+    printTuple(value, log, std::make_index_sequence<sizeof...(TupleTypes)>());
+    return log;
+}
+
 template <typename EnumType, typename LogDataType>
 std::enable_if_t<std::is_enum_v<EnumType>, logging::enable_if_logging_type<LogDataType>> operator<<(LogDataType&& log, EnumType const& b) {
     log << static_cast<int>(b);

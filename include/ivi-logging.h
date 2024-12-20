@@ -201,8 +201,12 @@ struct TypeSet {};
 template <class, class>
 class LogContextT;
 
+struct FailSafe {};
+
 template <typename Type>
-using enable_if_logging_type = std::enable_if_t<std::is_base_of_v<logging::LogData, std::remove_reference_t<Type>>, Type&>;
+using enable_if_logging_type =
+    std::enable_if_t<std::is_base_of_v<logging::LogData, std::remove_reference_t<Type>> or std::is_base_of_v<logging::FailSafe, std::remove_reference_t<Type>>,
+                     Type&>;
 
 template <template <class...> class ContextTypesClass, class... ContextTypes, template <class...> class ContextDataTypesClass, class... LogDataTypes>
 class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>> : public LogContextCommon {
@@ -279,14 +283,13 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
             return *this;
         }
 
-        struct FailSafeLogData {
+        struct FailSafeLogData : public FailSafe {
             FailSafeLogData(LogEntry& logData) : m_logData{logData} {
             }
 
             template <typename Type>
-            FailSafeLogData& operator<<(Type const&) {
-                //                				for_each_in_tuple_(m_contexts, streamFunctor(), v);
-                return *this;
+            void write(Type const& value) {
+                m_logData.write(value);
             }
 
             LogEntry& m_logData;
@@ -343,7 +346,31 @@ static constexpr bool isNativeType() {
 }
 
 template <typename LogDataType, typename ValueType>
-std::enable_if_t<logging::isNativeType<ValueType>(), logging::enable_if_logging_type<LogDataType>> operator<<(LogDataType&& log, ValueType const& v) {
+std::enable_if_t<logging::isNativeType<ValueType>() and std::is_base_of_v<logging::LogData, std::remove_reference_t<LogDataType>>, LogDataType&>
+operator<<(LogDataType&& log, ValueType const& v) {
+    log.write(v);
+    return log;
+}
+
+template <typename ValueType, typename StreamType, typename = void>
+struct has_logging_support : std::false_type {};
+
+template <typename ValueType, typename StreamType>
+struct has_logging_support<ValueType, StreamType, decltype(void(std::declval<StreamType&>() << std::declval<ValueType const&>()))> : ::std::true_type {};
+
+template <typename Type>
+using enable_if_fail_safe_logging_type = std::enable_if_t<std::is_base_of_v<logging::FailSafe, std::remove_reference_t<Type>>, Type&>;
+
+template <typename LogDataType, typename ValueType>
+std::enable_if_t<not logging::isNativeType<ValueType>() and not has_logging_support<ValueType, LogDataType>::value,
+                 logging::enable_if_fail_safe_logging_type<LogDataType>>
+operator<<(LogDataType&& log, ValueType const&) {
+    log.write("XXX");
+    return log;
+}
+
+template <typename LogDataType, typename ValueType>
+std::enable_if_t<logging::isNativeType<ValueType>(), logging::enable_if_fail_safe_logging_type<LogDataType>> operator<<(LogDataType&& log, ValueType const& v) {
     log.write(v);
     return log;
 }
