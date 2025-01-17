@@ -305,6 +305,13 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
          * Enables using types which are not supported for logging, without getting a compile error
          */
         LogNoFail& noFail(char const* unsupportedText = "XXX") {
+            return enableUnsupportedTypes(unsupportedText);
+        }
+
+        /**
+         * Enables using types which are not supported for logging, without getting a compile error
+         */
+        LogNoFail& enableUnsupportedTypes(char const* unsupportedText = "XXX") {
             m_protectedLogData.m_unsupportedText = unsupportedText;
             return m_protectedLogData;
         }

@@ -93,6 +93,10 @@ void myFunction() {
     size_t dd = 0x123456789986754;
     log_info() << dd;
     log_info() << std::hex << dd;
+
+    log_info() << std::variant<int, std::string>{"This is a variant"};
+    log_info() << "Not defined optional: " << std::optional<std::string>{};
+    log_info() << "Defined optional: " << std::optional<std::string>{"optional value"};
 }
 
 int generateDataForLogging() {

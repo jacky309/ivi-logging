@@ -6,9 +6,11 @@
 #include "ivi-logging-common.h"
 #include <exception>
 #include <map>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 namespace logging {
@@ -65,6 +67,28 @@ logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::unordere
 template <typename ElementType, std::size_t Extent, class LogType>
 logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::array<ElementType, Extent> const& v) {
     return streamArrayType(log, v);
+}
+
+template <typename... VariantTypes, typename LogType, typename DisableInvalidVariants = std::enable_if_t<sizeof...(VariantTypes) != 0, void>>
+::logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::variant<VariantTypes...> const& value) {
+    std::visit(
+        [&](auto const& v) {
+            log << v;
+        },
+        value);
+
+    return log;
+}
+
+template <typename Type, typename LogType>
+::logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::optional<Type> const& value) {
+    if (value.has_value()) {
+        log << value.value();
+    } else {
+        log << "{}";
+    }
+
+    return log;
 }
 
 template <typename LogType>
