@@ -6,6 +6,8 @@
 #include "ivi-logging-common.h"
 #include <chrono>
 #include <exception>
+#include <iomanip>
+#include <iostream>
 #include <map>
 #include <optional>
 #include <string>
@@ -89,6 +91,15 @@ template <typename Type, typename LogType>
         log << "{}";
     }
 
+    return log;
+}
+
+template <typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::chrono::system_clock::time_point const& timePoint) {
+    std::time_t tm = std::chrono::system_clock::to_time_t(timePoint);
+    std::ostringstream oss;
+    oss << std::put_time(std::localtime(&tm), "%Ec");
+    log << oss.str();
     return log;
 }
 
