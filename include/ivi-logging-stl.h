@@ -4,6 +4,7 @@
 #pragma once
 
 #include "ivi-logging-common.h"
+#include <chrono>
 #include <exception>
 #include <map>
 #include <optional>
@@ -88,6 +89,42 @@ template <typename Type, typename LogType>
         log << "{}";
     }
 
+    return log;
+}
+
+template <typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::chrono::hours const& value) {
+    log << value.count() << "h";
+    return log;
+}
+
+template <typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::chrono::minutes const& value) {
+    log << value.count() << "min";
+    return log;
+}
+
+template <typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::chrono::seconds const& value) {
+    log << value.count() << "s";
+    return log;
+}
+
+template <typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::chrono::milliseconds const& value) {
+    log << value.count() << "ms";
+    return log;
+}
+
+template <typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::chrono::microseconds const& value) {
+    log << value.count() << "us";
+    return log;
+}
+
+template <typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::chrono::nanoseconds const& value) {
+    log << value.count() << "ns";
     return log;
 }
 

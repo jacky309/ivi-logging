@@ -97,6 +97,10 @@ void myFunction() {
     log_info() << std::variant<int, std::string>{"This is a variant"};
     log_info() << "Not defined optional: " << std::optional<std::string>{};
     log_info() << "Defined optional: " << std::optional<std::string>{"optional value"};
+
+    log_info() << "Chrono duration in microseconds: " << std::chrono::microseconds{123};
+    log_info() << "Chrono duration in milliseconds: " << std::chrono::milliseconds{123};
+    log_info() << "Chrono duration in seconds: " << std::chrono::seconds{12};
 }
 
 int generateDataForLogging() {
