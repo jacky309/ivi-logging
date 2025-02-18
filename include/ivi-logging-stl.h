@@ -40,7 +40,7 @@ LogType& streamMapType(LogType& log, MapType const& v) {
 template <typename ArrayType, class LogType>
 LogType& streamArrayType(LogType& log, ArrayType const& v) {
     bool isFirst = true;
-    log << " [ ";
+    log << "[ ";
     for (auto& element : v) {
         if (not isFirst) {
             log << ", ";
@@ -48,7 +48,7 @@ LogType& streamArrayType(LogType& log, ArrayType const& v) {
         isFirst = false;
         log << element;
     }
-    log << " ] ";
+    log << " ]";
     return log;
 }
 
