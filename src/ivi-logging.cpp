@@ -150,8 +150,32 @@ bool LogContextBase::s_initialized;
 ConsoleLogContext::ConsoleLogContext() {
     m_colorSupport = (getConsoleWidth() != 0);
     if (!s_envVarCheckDone) {
-        if (!readEnvVarAsBool("LOGGING_ENABLE_CONSOLE", true))
+        if (not readEnvVarAsBool("LOGGING_ENABLE_CONSOLE", true)) {
             s_defaultLogLevel = LogLevel::None;
+        } else {
+            char const* logLevelEnv = getenv("LOGGING_CONSOLE_LOGLEVEL");
+            if (logLevelEnv != nullptr) {
+                std::string levelString = logLevelEnv;
+                for (auto& c : levelString) {
+                    c = std::tolower(c);
+                }
+                static constexpr std::array<std::pair<LogLevel, char const*>, 7> logLevelStrings{{
+                    {LogLevel::None, "none"},
+                    {LogLevel::Fatal, "fatal"},
+                    {LogLevel::Error, "error"},
+                    {LogLevel::Warning, "warning"},
+                    {LogLevel::Info, "info"},
+                    {LogLevel::Debug, "debug"},
+                    {LogLevel::Verbose, "verbose"},
+                }};
+
+                for (auto const& entry : logLevelStrings) {
+                    if (levelString == entry.second) {
+                        s_defaultLogLevel = entry.first;
+                    }
+                }
+            }
+        }
         s_envVarCheckDone = true;
     }
 }

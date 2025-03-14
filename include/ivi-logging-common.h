@@ -80,8 +80,8 @@ class LogContextCommon {
     }
 
   private:
-    const std::string m_id;
-    const std::string m_description;
+    std::string const m_id;
+    std::string const m_description;
 };
 
 class LogContextBase {
