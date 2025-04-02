@@ -103,6 +103,32 @@ logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::chrono::
     return log;
 }
 
+#if __cplusplus >= 202002L
+template <typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::chrono::years const& value) {
+    log << value.count() << "yr";
+    return log;
+}
+
+template <typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::chrono::months const& value) {
+    log << value.count() << "mo";
+    return log;
+}
+
+template <typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::chrono::weeks const& value) {
+    log << value.count() << "wk";
+    return log;
+}
+
+template <typename LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::chrono::days const& value) {
+    log << value.count() << "d";
+    return log;
+}
+#endif
+
 template <typename LogType>
 logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::chrono::hours const& value) {
     log << value.count() << "h";
