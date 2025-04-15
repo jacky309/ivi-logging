@@ -36,10 +36,4 @@ logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::tuple<Tu
     return log;
 }
 
-template <typename EnumType, typename LogType>
-std::enable_if_t<std::is_enum_v<EnumType>, logging::enable_if_logging_type<LogType>> operator<<(LogType&& log, EnumType const& b) {
-    log << static_cast<int>(b);
-    return log;
-}
-
 } // namespace logging
