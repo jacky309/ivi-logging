@@ -13,12 +13,17 @@ LOG_DECLARE_DEFAULT_CONTEXT(mainContext, "MAIN", "This is a description of that 
 // Instantiate another context which can be used instead of the previous one if specified
 LOG_DECLARE_CONTEXT(anotherContext, "CXT2", "Another context");
 
+class MyClass2 {};
+
 namespace MyNamespace {
 
 // Instantiate a log context and define it as default for this module
 LOG_DECLARE_DEFAULT_CONTEXT(defaultContextForSpecificNamespace, "MAI2", "This is a description of that logging context");
 
 void MyFunction() {
+    int8_t h[9]{1, 2, 3, 4, 5, 6, 7, 8, 9};
+    log_debug() << h;
+    log_debug().enableUnsupportedTypes() << std::make_tuple(MyClass2{}, 8, h);
     log_info() << "My function called";
 }
 
