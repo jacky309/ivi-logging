@@ -8,6 +8,7 @@
 
 #ifdef IVI_LOGGING_DLT_AVAILABLE
 #include "ivi-logging-dlt.h"
+#include "ivi-logging-dltcpp.h"
 #endif
 
 namespace logging {

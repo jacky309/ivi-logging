@@ -11,4 +11,3 @@ foreach(DEPENDENCY @ADDITIONAL_PKGCONFIG_DEPENDENCIES@)
     target_link_libraries(ivi-logging-dependencies INTERFACE PkgConfig::${DEPENDENCY})
     message("Added dependency ${DEPENDENCY}")
 endforeach()
-
