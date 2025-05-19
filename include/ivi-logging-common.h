@@ -17,6 +17,8 @@ enum class LogLevel : uint8_t { None, Fatal, Error, Warning, Info, Debug, Verbos
 
 struct AppLogContext;
 
+class LogData {};
+
 extern AppLogContext* s_pAppLogContext;
 
 std::string getProcessName(pid_t pid);

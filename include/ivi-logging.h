@@ -201,8 +201,6 @@ struct TypeSet {};
 template <class, class>
 class LogContextT;
 
-class LogData {};
-
 struct LogNoFailBase {};
 
 template <typename Type>

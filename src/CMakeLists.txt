@@ -1,3 +1,20 @@
+
+set(HEADER_FILES
+	ivi-logging.h
+	ivi-logging-types.h
+	ivi-logging-stl.h
+	ivi-logging-console.h
+	ivi-logging-file.h
+	ivi-logging-common.h
+	ivi-logging-null.h
+	ivi-logging-utils.h
+	ivi-no-logging.h
+)
+
+if (${DLT_FOUND})
+	list(APPEND HEADER_FILES ivi-logging-dlt.h)
+endif()
+
 add_library( ${LIB_NAME} SHARED
 	ivi-logging.cpp
 	backtrace.cpp
@@ -25,21 +42,6 @@ install(TARGETS ${LIB_NAME}
    DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-set(HEADER_FILES
-	ivi-logging.h
-	ivi-logging-types.h
-	ivi-logging-stl.h
-	ivi-logging-console.h
-	ivi-logging-file.h
-	ivi-logging-common.h
-	ivi-logging-null.h
-	ivi-logging-utils.h
-	ivi-no-logging.h
-)
-
-if (${DLT_FOUND})
-	list(APPEND HEADER_FILES ivi-logging-dlt.h)
-endif()
 
 foreach(HEADER_FILE ${HEADER_FILES})
    list(APPEND INCLUDE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../include/${HEADER_FILE})
