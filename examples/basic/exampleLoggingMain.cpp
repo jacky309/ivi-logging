@@ -13,6 +13,8 @@ LOG_DECLARE_DEFAULT_CONTEXT(mainContext, "MAIN", "This is a description of that 
 // Instantiate another context which can be used instead of the previous one if specified
 LOG_DECLARE_CONTEXT(anotherContext, "CXT2", "Another context");
 
+class MyClass2 {};
+
 namespace MyNamespace {
 
 // Instantiate a log context and define it as default for this module
