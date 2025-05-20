@@ -120,7 +120,6 @@ class DaemonConnection {
         auto* x = buffers.data();
         int unused[]{(to_iovec(*x++, values), 1)...}; // call f
         auto const bytes_written = writev(daemonFileDescriptor, buffers.data(), buffers.size());
-        printf("\n");
     }
 
     int daemonFileDescriptor;
