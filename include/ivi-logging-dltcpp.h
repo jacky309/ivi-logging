@@ -198,8 +198,9 @@ class DaemonConnection {
     void send(Types const&... values) {
         std::array<iovec, sizeof...(Types)> buffers;
         auto* x = buffers.data();
-        int unused[]{(to_iovec(*x++, values), 1)...};
-        auto const bytes_written = writev(daemonFileDescriptor, buffers.data(), buffers.size());
+        [[maybe_unused]] int unused[]{(to_iovec(*x++, values), 1)...};
+
+        [[maybe_unused]] auto const bytes_written = writev(daemonFileDescriptor, buffers.data(), buffers.size());
     }
 
     void handleIncomingMessage() {
@@ -207,13 +208,13 @@ class DaemonConnection {
         int const byteCount = read(appFileDescriptor, buffer.data(), buffer.size());
         if (byteCount != -1) {
             printf("received %s\n", binaryToHex(buffer.data(), byteCount));
-            assert(byteCount >= sizeof(DltUserHeader));
+            assert(static_cast<size_t>(byteCount) >= sizeof(DltUserHeader));
             auto const userHeader = reinterpret_cast<DltUserHeader const*>(buffer.data());
             void const* message = buffer.data() + sizeof(DltUserHeader);
 
             switch (userHeader->message) {
                 case MessageType::DLT_USER_MESSAGE_LOG_STATE: {
-                    auto const logLevelMsg = reinterpret_cast<DltUserControlMsgLogState const*>(message);
+                    //                    auto const logLevelMsg = reinterpret_cast<DltUserControlMsgLogState const*>(message);
                     printf("received DltUserControlMsgLogState\n");
                 } break;
 
@@ -222,11 +223,14 @@ class DaemonConnection {
                     printf("received DltUserControlMsgLogLevel %d pos:%d\n", logLevelMsg->log_level, logLevelMsg->log_level_pos);
                     applyLogLevel(*logLevelMsg);
                 }
+
+                default: {
+                } break;
             }
         }
     }
 
-    uint32_t registerContext(DltCppContextClass* context);
+    int32_t registerContext(DltCppContextClass* context);
 
     void applyLogLevel(DltUserControlMsgLogLevel const& message);
 
@@ -318,14 +322,14 @@ class DltCppContextClass : public LogContextBase, private DltContext {
         size_t const descriptionLength = strlen(m_context->getDescription());
 
         DltUserHeader userHeader{.message = MessageType::RegisterContext};
-        DltUserControlMsgRegisterContext registerMessage{
-            .log_level_pos = DaemonConnection::getInstance().registerContext(this), .pid = getpid(), .description_length = descriptionLength};
+        DltUserControlMsgRegisterContext registerMessage{.log_level_pos = DaemonConnection::getInstance().registerContext(this),
+                                                         .pid = getpid(),
+                                                         .description_length = static_cast<uint32_t>(descriptionLength)};
 
         assign_id(registerMessage.apid, s_pAppLogContext->m_id.c_str());
         assign_id(registerMessage.ctid, m_context->getID());
 
         DaemonConnection::getInstance().send(userHeader, registerMessage, span<char>(m_context->getDescription(), descriptionLength));
-
         assign_id(extendedHeader.apid, s_pAppLogContext->m_id.c_str()); /* application id */
         assign_id(extendedHeader.ctid, getParentContext().getID());     /* context id */
     }
@@ -339,14 +343,13 @@ class DltCppContextClass : public LogContextBase, private DltContext {
      * Register the application.
      */
     static void registerDLTApp(char const* id, char const* description) {
-
         pid_t pid = getpid();
         char descriptionWithPID[1024];
         uint32_t const descriptionLength = snprintf(descriptionWithPID, sizeof(descriptionWithPID), "PID:%i / %s", pid, description);
 
         DltUserHeader userHeader{.message = MessageType::RegisterApp};
         DltUserControlMsgRegisterApplication registerMesssage{.pid = pid, .description_length = descriptionLength};
-        memcpy(registerMesssage.apid, id, DLT_ID_SIZE);
+        assign_id(registerMesssage.apid, id);
 
         DaemonConnection::getInstance().send(userHeader, registerMesssage, span{descriptionWithPID, descriptionLength});
     }

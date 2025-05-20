@@ -17,7 +17,7 @@ DaemonConnection& DaemonConnection::getInstance() {
 
 static std::vector<DltCppContextClass*> contexts;
 
-uint32_t DaemonConnection::registerContext(DltCppContextClass* context) {
+int32_t DaemonConnection::registerContext(DltCppContextClass* context) {
     uint32_t const pos = contexts.size();
     contexts.push_back(context);
     return pos;
