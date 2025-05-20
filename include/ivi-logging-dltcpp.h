@@ -189,6 +189,11 @@ class DaemonConnection {
   public:
     static DaemonConnection& getInstance();
 
+    ~DaemonConnection() {
+        m_stopRequested = true;
+        readerThread.join();
+    }
+
     template <typename... Types>
     void send(Types const&... values) {
         std::array<iovec, sizeof...(Types)> buffers;
@@ -210,7 +215,6 @@ class DaemonConnection {
                 case MessageType::DLT_USER_MESSAGE_LOG_STATE: {
                     auto const logLevelMsg = reinterpret_cast<DltUserControlMsgLogState const*>(message);
                     printf("received DltUserControlMsgLogState\n");
-
                 } break;
 
                 case MessageType::DLT_USER_MESSAGE_LOG_LEVEL: {
@@ -234,6 +238,7 @@ class DaemonConnection {
     int daemonFileDescriptor;
     int appFileDescriptor;
     bool m_initialized{false};
+    bool m_stopRequested{false};
 };
 
 inline void assign_id(char* dest, char const* src) {
