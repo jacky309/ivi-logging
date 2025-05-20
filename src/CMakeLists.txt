@@ -13,7 +13,7 @@ set(HEADER_FILES
 
 if (${DLT_FOUND})
 	list(APPEND HEADER_FILES ivi-logging-dlt.h ivi-logging-dltcpp.h)
-	set(DLT_LIBRARY_FILES ivi-logging-dlt.cpp)
+	set(DLT_LIBRARY_FILES ivi-logging-dltcpp.cpp)
 endif()
 
 add_library(${LIB_NAME} SHARED
