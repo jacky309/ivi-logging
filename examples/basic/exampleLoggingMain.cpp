@@ -19,6 +19,9 @@ namespace MyNamespace {
 LOG_DECLARE_DEFAULT_CONTEXT(defaultContextForSpecificNamespace, "MAI2", "This is a description of that logging context");
 
 void MyFunction() {
+    int8_t h[9]{1, 2, 3, 4, 5, 6, 7, 8, 9};
+    log_debug() << h;
+    log_debug().enableUnsupportedTypes() << std::make_tuple(MyClass2{}, 8, h);
     log_info() << "My function called";
 }
 
