@@ -6,10 +6,83 @@
 #include <cstring>
 #include <sys/time.h>
 #include <sys/uio.h>
+#include <thread>
 
 namespace logging {
 
 namespace dlt {
+
+enum class MessageType : uint32_t { SendLog = 1, RegisterApp = 2, RegisterContext = 4, DLT_USER_MESSAGE_LOG_STATE = 12, DLT_USER_MESSAGE_LOG_LEVEL = 6 };
+
+/**
+ * This is the internal message content to exchange control msg log level information between application and daemon.
+ */
+typedef struct {
+    uint8_t log_level;     /**< log level */
+    uint8_t trace_status;  /**< trace status */
+    int32_t log_level_pos; /**< offset in management structure on user-application side */
+} DLT_PACKED DltUserControlMsgLogLevel;
+
+typedef struct {
+    int8_t log_state; /**< the state to be used for logging state: 0 = off, 1 = external client connected */
+} DLT_PACKED DltUserControlMsgLogState;
+
+typedef struct {
+    char pattern[DLT_ID_SIZE]{'D', 'U', 'H', 1}; /**< This pattern should be DUH0x01 */
+    MessageType message;                         /**< messsage info */
+} DLT_PACKED DltUserHeader;
+
+typedef struct {
+    char apid[DLT_ID_SIZE];      /**< application id */
+    pid_t pid;                   /**< process id of user application */
+    uint32_t description_length; /**< length of description */
+} DLT_PACKED DltUserControlMsgRegisterApplication;
+
+typedef struct {
+    char apid[DLT_ID_SIZE];      /**< application id */
+    char ctid[DLT_ID_SIZE];      /**< context id */
+    int32_t log_level_pos{};     /**< offset in management structure on user-application side */
+    int8_t log_level{};          /**< log level */
+    int8_t trace_status{};       /**< trace status */
+    pid_t pid;                   /**< process id of user application */
+    uint32_t description_length; /**< length of description */
+} DLT_PACKED DltUserControlMsgRegisterContext;
+
+typedef struct {
+    char pattern[DLT_ID_SIZE]{'D', 'L', 'T', 1}; /**< This pattern should be DLT0x01 */
+    uint32_t seconds;                            /**< seconds since 1.1.1970 */
+    int32_t microseconds;                        /**< Microseconds */
+    char ecu[DLT_ID_SIZE]{'E', 'C', 'U', '1'};   /**< The ECU id is added, if it is not already in the DLT message itself */
+} DLT_PACKED DltStorageHeader;
+
+/**
+ * The structure of the DLT standard header. This header is used in each DLT message.
+ */
+typedef struct {
+    uint8_t htyp{DLT_HTYP_PROTOCOL_VERSION1 | DLT_HTYP_WEID | DLT_HTYP_WTMS | DLT_HTYP_WSID |
+                 DLT_HTYP_UEH}; /**< This parameter contains several informations, see definitions below */
+    uint8_t mcnt;               /**< The message counter is increased with each sent DLT message */
+    uint16_t len;               /**< Length of the complete message, without storage header */
+} DLT_PACKED DltStandardHeader;
+
+/**
+ * The structure of the DLT extra header parameters. Each parameter is sent only if enabled in htyp.
+ */
+typedef struct {
+    char ecu[DLT_ID_SIZE]{'E', 'C', 'U', '1'}; /**< ECU id */
+    uint32_t seid{};                           /**< Session number */
+    uint32_t tmsp;                             /**< Timestamp since system start in 0.1 milliseconds */
+} DLT_PACKED DltStandardHeaderExtra;
+
+/**
+ * The structure of the DLT extended header. This header is only sent if enabled in htyp parameter.
+ */
+typedef struct {
+    uint8_t msin{DLT_MSIN_VERB | (DLT_TYPE_LOG << DLT_MSIN_MSTP_SHIFT)}; /**< messsage info */
+    uint8_t noar;                                                        /**< number of arguments */
+    char apid[DLT_ID_SIZE];                                              /**< application id */
+    char ctid[DLT_ID_SIZE];                                              /**< context id */
+} DLT_PACKED DltExtendedHeader;
 
 static constexpr auto ENABLE_DEBUG = false;
 template <typename Type>
@@ -69,7 +142,7 @@ inline char printableAscii(char c) {
 }
 
 inline char* binaryToHex(void const* inSt, size_t inSize) {
-    static char out[65535];
+    static thread_local char out[65535];
     auto const inStr = reinterpret_cast<unsigned char const*>(inSt);
     static char hex[] = "0123456789ABCDEF";
     size_t outIndex = 0;
@@ -111,85 +184,57 @@ void to_iovec(iovec& iovec, span<Type> const& type) {
     }
 }
 
+class DltCppContextClass;
 class DaemonConnection {
   public:
+    static DaemonConnection& getInstance();
+
     template <typename... Types>
     void send(Types const&... values) {
         std::array<iovec, sizeof...(Types)> buffers;
-
         auto* x = buffers.data();
-        int unused[]{(to_iovec(*x++, values), 1)...}; // call f
+        int unused[]{(to_iovec(*x++, values), 1)...};
         auto const bytes_written = writev(daemonFileDescriptor, buffers.data(), buffers.size());
     }
 
+    void handleIncomingMessage() {
+        std::array<char, 1024> buffer;
+        int const byteCount = read(appFileDescriptor, buffer.data(), buffer.size());
+        if (byteCount != -1) {
+            printf("received %s\n", binaryToHex(buffer.data(), byteCount));
+            assert(byteCount >= sizeof(DltUserHeader));
+            auto const userHeader = reinterpret_cast<DltUserHeader const*>(buffer.data());
+            void const* message = buffer.data() + sizeof(DltUserHeader);
+
+            switch (userHeader->message) {
+                case MessageType::DLT_USER_MESSAGE_LOG_STATE: {
+                    auto const logLevelMsg = reinterpret_cast<DltUserControlMsgLogState const*>(message);
+                    printf("received DltUserControlMsgLogState\n");
+
+                } break;
+
+                case MessageType::DLT_USER_MESSAGE_LOG_LEVEL: {
+                    auto const logLevelMsg = reinterpret_cast<DltUserControlMsgLogLevel const*>(message);
+                    printf("received DltUserControlMsgLogLevel %d pos:%d\n", logLevelMsg->log_level, logLevelMsg->log_level_pos);
+                    applyLogLevel(*logLevelMsg);
+                }
+            }
+        }
+    }
+
+    uint32_t registerContext(DltCppContextClass* context);
+
+    void applyLogLevel(DltUserControlMsgLogLevel const& message);
+
+  private:
+    void init();
+
+    std::thread readerThread;
+
     int daemonFileDescriptor;
     int appFileDescriptor;
+    bool m_initialized{false};
 };
-
-DaemonConnection getDaemon();
-
-enum class MessageType : uint32_t {
-    SendLog = 1,
-    RegisterApp = 2,
-    RegisterContext = 4,
-};
-
-typedef struct {
-    char pattern[DLT_ID_SIZE]{'D', 'U', 'H', 1}; /**< This pattern should be DUH0x01 */
-    MessageType message;                         /**< messsage info */
-} DLT_PACKED DltUserHeader;
-
-typedef struct {
-    char apid[DLT_ID_SIZE];      /**< application id */
-    pid_t pid;                   /**< process id of user application */
-    uint32_t description_length; /**< length of description */
-} DLT_PACKED DltUserControlMsgRegisterApplication;
-
-typedef struct {
-    char apid[DLT_ID_SIZE];      /**< application id */
-    char ctid[DLT_ID_SIZE];      /**< context id */
-    int32_t log_level_pos{};     /**< offset in management structure on user-application side */
-    int8_t log_level{};          /**< log level */
-    int8_t trace_status{};       /**< trace status */
-    pid_t pid;                   /**< process id of user application */
-    uint32_t description_length; /**< length of description */
-} DLT_PACKED DltUserControlMsgRegisterContext;
-
-typedef struct {
-    char pattern[DLT_ID_SIZE]{'D', 'L', 'T', 1}; /**< This pattern should be DLT0x01 */
-    uint32_t seconds;                            /**< seconds since 1.1.1970 */
-    int32_t microseconds;                        /**< Microseconds */
-    char ecu[DLT_ID_SIZE]{'E', 'C', 'U', '1'};   /**< The ECU id is added, if it is not already in the DLT message itself */
-} DLT_PACKED DltStorageHeader;
-
-/**
- * The structure of the DLT standard header. This header is used in each DLT message.
- */
-typedef struct {
-    uint8_t htyp{DLT_HTYP_PROTOCOL_VERSION1 | DLT_HTYP_WEID | DLT_HTYP_WTMS | DLT_HTYP_WSID |
-                 DLT_HTYP_UEH}; /**< This parameter contains several informations, see definitions below */
-    uint8_t mcnt;               /**< The message counter is increased with each sent DLT message */
-    uint16_t len;               /**< Length of the complete message, without storage header */
-} DLT_PACKED DltStandardHeader;
-
-/**
- * The structure of the DLT extra header parameters. Each parameter is sent only if enabled in htyp.
- */
-typedef struct {
-    char ecu[DLT_ID_SIZE]{'E', 'C', 'U', '1'}; /**< ECU id */
-    uint32_t seid{};                             /**< Session number */
-    uint32_t tmsp;                             /**< Timestamp since system start in 0.1 milliseconds */
-} DLT_PACKED DltStandardHeaderExtra;
-
-/**
- * The structure of the DLT extended header. This header is only sent if enabled in htyp parameter.
- */
-typedef struct {
-    uint8_t msin{DLT_MSIN_VERB | (DLT_TYPE_LOG << DLT_MSIN_MSTP_SHIFT)}; /**< messsage info */
-    uint8_t noar;                                                        /**< number of arguments */
-    char apid[DLT_ID_SIZE];                                              /**< application id */
-    char ctid[DLT_ID_SIZE];                                              /**< context id */
-} DLT_PACKED DltExtendedHeader;
 
 inline void assign_id(char* dest, char const* src) {
     memcpy(dest, src, DLT_ID_SIZE);
@@ -213,10 +258,8 @@ class DltCppContextClass : public LogContextBase, private DltContext {
 
     bool isEnabled(LogLevel logLevel) const {
         auto const dltLogLevel = getDLTLogLevel(logLevel);
-        return dltLogLevel <= m_dltLogLevel;
+        return dltLogLevel <= m_activeLogLevel;
     }
-
-    static constexpr auto m_dltLogLevel = DLT_LOG_DEBUG;
 
     std::atomic<int> m_messageCount{0};
 
@@ -270,12 +313,13 @@ class DltCppContextClass : public LogContextBase, private DltContext {
         size_t const descriptionLength = strlen(m_context->getDescription());
 
         DltUserHeader userHeader{.message = MessageType::RegisterContext};
-        DltUserControlMsgRegisterContext registerMessage{.pid = getpid(), .description_length = descriptionLength};
+        DltUserControlMsgRegisterContext registerMessage{
+            .log_level_pos = DaemonConnection::getInstance().registerContext(this), .pid = getpid(), .description_length = descriptionLength};
 
         assign_id(registerMessage.apid, s_pAppLogContext->m_id.c_str());
         assign_id(registerMessage.ctid, m_context->getID());
 
-        getDaemon().send(userHeader, registerMessage, span<char>(m_context->getDescription(), descriptionLength));
+        DaemonConnection::getInstance().send(userHeader, registerMessage, span<char>(m_context->getDescription(), descriptionLength));
 
         assign_id(extendedHeader.apid, s_pAppLogContext->m_id.c_str()); /* application id */
         assign_id(extendedHeader.ctid, getParentContext().getID());     /* context id */
@@ -299,12 +343,19 @@ class DltCppContextClass : public LogContextBase, private DltContext {
         DltUserControlMsgRegisterApplication registerMesssage{.pid = pid, .description_length = descriptionLength};
         memcpy(registerMesssage.apid, id, DLT_ID_SIZE);
 
-        getDaemon().send(userHeader, registerMesssage, span{descriptionWithPID, descriptionLength});
+        DaemonConnection::getInstance().send(userHeader, registerMesssage, span{descriptionWithPID, descriptionLength});
+    }
+
+    void setActiveLogLevel(DltLogLevelType activeLogLevel) {
+        m_activeLogLevel = activeLogLevel;
+        printf("Log level for context: %s set to %d\n", this->m_context->getID(), activeLogLevel);
     }
 
   private:
     LogContextCommon* m_context = nullptr;
     DltExtendedHeader extendedHeader{};
+
+    DltLogLevelType m_activeLogLevel{DltLogLevelType::DLT_LOG_MAX};
 
     friend class DltCppLogData;
 };
@@ -383,7 +434,7 @@ class DltCppLogData : public ::logging::LogData {
             sizeof(DltStandardHeader) + sizeof(DltExtendedHeader) + DLT_STANDARD_HEADER_EXTRA_SIZE(standardheader.htyp) + m_contentSize;
         standardheader.len = htons(standardheaderLen);
 
-        getDaemon().send(userHeader, standardheader, headerextra, extendedheader, span(m_content.data(), m_contentSize));
+        DaemonConnection::getInstance().send(userHeader, standardheader, headerextra, extendedheader, span(m_content.data(), m_contentSize));
     }
 
     LogInfo const& getData() const {
