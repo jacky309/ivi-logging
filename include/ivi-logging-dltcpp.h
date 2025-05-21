@@ -499,6 +499,7 @@ class DltCppLogData : public ::logging::LogData {
             m_contentSize = 0;
             write("DLT message too large");
             m_isFull = true;
+            printf("DLT message too large\n");
         }
         return not m_isFull;
     }
@@ -513,11 +514,13 @@ class DltCppLogData : public ::logging::LogData {
     using DltTypeInfo = uint32_t;
 
     void write(char const* v, size_t size) {
-        if (checkOverflow(size + 1 + sizeof(uint16_t) + sizeof(DltTypeInfo) )) {
+        if (checkOverflow(size + 1 + sizeof(uint16_t) + sizeof(DltTypeInfo))) {
             writeType(DLT_TYPE_INFO_STRG | DLT_SCOD_UTF8);
             uint16_t const sizeAsUint16 = static_cast<uint16_t>(size) + 1;
             writeBuffer(&sizeAsUint16, sizeof(sizeAsUint16));
-            writeBuffer(v, size + 1);
+            writeBuffer(v, size);
+            static constexpr char nullTermination = 0;
+            writeBuffer(&nullTermination, 1);
         }
     }
 
