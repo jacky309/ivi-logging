@@ -7,7 +7,7 @@
 namespace logging::dlt {
 
 static char const* dlt_daemon_fifo = "/tmp/dlt";
-char dltFifoBaseDir[DLT_PATH_MAX] = "/tmp";
+static char const* dltFifoBaseDir = "/tmp";
 
 DaemonConnection& DaemonConnection::getInstance() {
     static DaemonConnection instance;
@@ -88,7 +88,7 @@ void DaemonConnection::init() {
 
         readerThread = std::thread([this]() {
             while (not m_stopRequested) {
-                handleIncomingMessage();
+//                handleIncomingMessage();
                 sleep(1);
             };
         });

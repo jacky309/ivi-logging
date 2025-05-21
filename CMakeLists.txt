@@ -51,7 +51,7 @@ include(${CMAKE_CURRENT_BINARY_DIR}/dependencies.cmake)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Wno-variadic-macros -Wno-vla-extension -Wno-gnu-zero-variadic-macro-arguments")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Wno-variadic-macros")
 
 configure_file(include/ivi-logging-config.h.in ivi-logging-config.h @ONLY)
 
