@@ -88,7 +88,7 @@ void DaemonConnection::init() {
 
         readerThread = std::thread([this]() {
             while (not m_stopRequested) {
-//                handleIncomingMessage();
+                handleIncomingMessage();
                 sleep(1);
             };
         });

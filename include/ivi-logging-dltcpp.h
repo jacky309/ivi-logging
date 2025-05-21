@@ -8,6 +8,9 @@
 #include <sys/uio.h>
 #include <thread>
 
+// #define DEBUG_TRACE(format, ...) printf("%s:%d %s     " format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+#define DEBUG_TRACE(format, ...)
+
 namespace logging {
 
 namespace dlt {
@@ -207,7 +210,7 @@ class DaemonConnection {
         std::array<char, 1024> buffer;
         int const byteCount = read(appFileDescriptor, buffer.data(), buffer.size());
         if (byteCount != -1) {
-            printf("received %s\n", binaryToHex(buffer.data(), byteCount));
+            DEBUG_TRACE("received %s", binaryToHex(buffer.data(), byteCount));
             assert(static_cast<size_t>(byteCount) >= sizeof(DltUserHeader));
             auto const userHeader = reinterpret_cast<DltUserHeader const*>(buffer.data());
             void const* message = buffer.data() + sizeof(DltUserHeader);
@@ -215,12 +218,12 @@ class DaemonConnection {
             switch (userHeader->message) {
                 case MessageType::DLT_USER_MESSAGE_LOG_STATE: {
                     //                    auto const logLevelMsg = reinterpret_cast<DltUserControlMsgLogState const*>(message);
-                    printf("received DltUserControlMsgLogState\n");
+                    DEBUG_TRACE("received DltUserControlMsgLogState");
                 } break;
 
                 case MessageType::DLT_USER_MESSAGE_LOG_LEVEL: {
                     auto const logLevelMsg = reinterpret_cast<DltUserControlMsgLogLevel const*>(message);
-                    printf("received DltUserControlMsgLogLevel %d pos:%d\n", logLevelMsg->log_level, logLevelMsg->log_level_pos);
+                    DEBUG_TRACE("received DltUserControlMsgLogLevel %d pos:%d", logLevelMsg->log_level, logLevelMsg->log_level_pos);
                     applyLogLevel(*logLevelMsg);
                 }
 
@@ -249,7 +252,7 @@ inline void assign_id(char* dest, char const* src) {
     memcpy(dest, src, DLT_ID_SIZE);
 }
 
-class DltCppContextClass : public LogContextBase, private DltContext {
+class DltCppContextClass : public LogContextBase {
 
   public:
     using LogDataType = DltCppLogData;
@@ -258,11 +261,11 @@ class DltCppContextClass : public LogContextBase, private DltContext {
     }
 
     ~DltCppContextClass() {
-        dlt_unregister_context(this);
     }
 
     void setParentContext(LogContextCommon& context) {
         m_context = &context;
+        DEBUG_TRACE("m_context = %p", (void*)m_context);
     }
 
     bool isEnabled(LogLevel logLevel) const {
@@ -270,10 +273,10 @@ class DltCppContextClass : public LogContextBase, private DltContext {
         return dltLogLevel <= m_activeLogLevel;
     }
 
-    std::atomic<int> m_messageCount{0};
-
     auto messageCounter() {
-        return m_messageCount++;
+        void const* pMessageCount = &m_messageCount;
+        DEBUG_TRACE("pMessageCount = %p", pMessageCount);
+        return m_messageCount.fetch_add(1);
     }
 
     static DltLogLevelType getDLTLogLevel(LogLevel level) {
@@ -356,12 +359,13 @@ class DltCppContextClass : public LogContextBase, private DltContext {
 
     void setActiveLogLevel(DltLogLevelType activeLogLevel) {
         m_activeLogLevel = activeLogLevel;
-        printf("Log level for context: %s set to %d\n", this->m_context->getID(), activeLogLevel);
+        DEBUG_TRACE("Log level for context: %s set to %d", this->m_context->getID(), activeLogLevel);
     }
 
   private:
     LogContextCommon* m_context = nullptr;
     DltExtendedHeader extendedHeader{};
+    std::atomic<int> m_messageCount{0};
 
     DltLogLevelType m_activeLogLevel{DltLogLevelType::DLT_LOG_MAX};
 
@@ -374,6 +378,7 @@ class DltCppLogData : public ::logging::LogData {
     using ContextType = DltCppContextClass;
 
     DltCppLogData() {
+        DEBUG_TRACE("DltCppLogData() this= %p", (void*)this);
     }
 
     void init(DltCppContextClass& context, LogInfo const& data) {
@@ -381,6 +386,8 @@ class DltCppLogData : public ::logging::LogData {
         m_context = &context;
         m_dltLogLevel = m_context->getDLTLogLevel(getData().getLogLevel());
         m_enabled = context.isEnabled(getData().getLogLevel());
+
+        DEBUG_TRACE("m_context = %p", (void*)m_context);
 
         /*
                 struct timeval tv;
@@ -391,6 +398,8 @@ class DltCppLogData : public ::logging::LogData {
     }
 
     virtual ~DltCppLogData() {
+        DEBUG_TRACE("DltCppLogData() this= %p ,  m_context = %p", (void*)this, (void*)m_context);
+
         if (isEnabled()) {
             if (m_context->isSourceCodeLocationInfoEnabled()) {
                 /*
@@ -425,6 +434,8 @@ class DltCppLogData : public ::logging::LogData {
     }
 
     void sendLog() {
+        DEBUG_TRACE("m_context = %p\n", (void*)m_context);
+
         DltUserHeader userHeader{.message = MessageType::SendLog};
 
         DltStandardHeader standardheader{};
@@ -443,6 +454,8 @@ class DltCppLogData : public ::logging::LogData {
         standardheader.len = htons(standardheaderLen);
 
         DaemonConnection::getInstance().send(userHeader, standardheader, headerextra, extendedheader, span(m_content.data(), m_contentSize));
+
+        DEBUG_TRACE("m_context = %p", (void*)m_context);
     }
 
     LogInfo const& getData() const {
@@ -473,23 +486,39 @@ class DltCppLogData : public ::logging::LogData {
     }
 
     void write(bool v) {
-        writeRaw(DLT_TYPE_INFO_BOOL, v);
+        writeWithTypeInfo(DLT_TYPE_INFO_BOOL, v);
     }
 
     void write(char const* v) {
         write(v, strlen(v));
     }
 
-    void writeBuffer(void const* v, size_t size) {
-        memcpy(m_content.data() + m_contentSize, v, size);
-        m_contentSize += size;
+    bool checkOverflow(size_t additionalSize) {
+        auto const newSize = m_contentSize + additionalSize;
+        if (newSize >= m_content.size()) {
+            m_contentSize = 0;
+            write("DLT message too large");
+            m_isFull = true;
+        }
+        return not m_isFull;
     }
 
+    void writeBuffer(void const* v, size_t size) {
+        if (not m_isFull) {
+            memcpy(m_content.data() + m_contentSize, v, size);
+            m_contentSize += size;
+        }
+    }
+
+    using DltTypeInfo = uint32_t;
+
     void write(char const* v, size_t size) {
-        writeType(DLT_TYPE_INFO_STRG | DLT_SCOD_UTF8);
-        uint16_t const sizeAsUint16 = static_cast<uint16_t>(size) + 1;
-        writeBuffer(&sizeAsUint16, sizeof(sizeAsUint16));
-        writeBuffer(v, size + 1);
+        if (checkOverflow(size + sizeof(uint16_t) + sizeof(DltTypeInfo))) {
+            writeType(DLT_TYPE_INFO_STRG | DLT_SCOD_UTF8);
+            uint16_t const sizeAsUint16 = static_cast<uint16_t>(size) + 1;
+            writeBuffer(&sizeAsUint16, sizeof(sizeAsUint16));
+            writeBuffer(v, size + 1);
+        }
     }
 
     void write(std::string_view v) {
@@ -502,65 +531,66 @@ class DltCppLogData : public ::logging::LogData {
 
     void write(float f) {
         // we assume a float is 32 bits
-        writeRaw(DLT_TYPE_INFO_FLOA | DLT_TYLE_32BIT, static_cast<float32_t>(f));
+        writeWithTypeInfo(DLT_TYPE_INFO_FLOA | DLT_TYLE_32BIT, static_cast<float32_t>(f));
     }
 
 // TODO : strangely, it seems like none of the types defined in "stdint.h" is equivalent to "long int" on a 32 bits platform
 #if __WORDSIZE == 32
     void write(long int v) {
-        writeRaw(DLT_TYPE_INFO_SINT | DLT_TYLE_32BIT, v);
+        writeWithTypeInfo(DLT_TYPE_INFO_SINT | DLT_TYLE_32BIT, v);
     }
     void write(unsigned long int v) {
-        writeRaw(DLT_TYPE_INFO_UINT | DLT_TYLE_32BIT | (isHexEnabled() ? DLT_SCOD_HEX : 0), v);
+        writeWithTypeInfo(DLT_TYPE_INFO_UINT | DLT_TYLE_32BIT | (isHexEnabled() ? DLT_SCOD_HEX : 0), v);
     }
 #endif
 
     void write(double f) {
         // we assume a double is 64 bits
-        writeRaw(DLT_TYPE_INFO_FLOA | DLT_TYLE_64BIT, static_cast<float64_t>(f));
+        writeWithTypeInfo(DLT_TYPE_INFO_FLOA | DLT_TYLE_64BIT, static_cast<float64_t>(f));
     }
 
     void write(uint64_t v) {
-        writeRaw(DLT_TYPE_INFO_UINT | DLT_TYLE_64BIT | (isHexEnabled() ? DLT_SCOD_HEX : 0), v);
+        writeWithTypeInfo(DLT_TYPE_INFO_UINT | DLT_TYLE_64BIT | (isHexEnabled() ? DLT_SCOD_HEX : 0), v);
     }
 
     void write(int64_t v) {
-        writeRaw(DLT_TYPE_INFO_SINT | DLT_TYLE_64BIT, v);
+        writeWithTypeInfo(DLT_TYPE_INFO_SINT | DLT_TYLE_64BIT, v);
     }
 
     void write(uint32_t v) {
-        writeRaw(DLT_TYPE_INFO_UINT | DLT_TYLE_32BIT | (isHexEnabled() ? DLT_SCOD_HEX : 0), v);
+        writeWithTypeInfo(DLT_TYPE_INFO_UINT | DLT_TYLE_32BIT | (isHexEnabled() ? DLT_SCOD_HEX : 0), v);
     }
 
     void write(int32_t v) {
-        writeRaw(DLT_TYPE_INFO_UINT | DLT_TYLE_32BIT, v);
+        writeWithTypeInfo(DLT_TYPE_INFO_UINT | DLT_TYLE_32BIT, v);
     }
 
     void write(uint16_t v) {
-        writeRaw(DLT_TYPE_INFO_UINT | DLT_TYLE_16BIT | (isHexEnabled() ? DLT_SCOD_HEX : 0), v);
+        writeWithTypeInfo(DLT_TYPE_INFO_UINT | DLT_TYLE_16BIT | (isHexEnabled() ? DLT_SCOD_HEX : 0), v);
     }
 
     void write(int16_t v) {
-        writeRaw(DLT_TYPE_INFO_SINT | DLT_TYLE_16BIT, v);
+        writeWithTypeInfo(DLT_TYPE_INFO_SINT | DLT_TYLE_16BIT, v);
     }
 
     void write(uint8_t v) {
-        writeRaw(DLT_TYPE_INFO_UINT | DLT_TYLE_8BIT | (isHexEnabled() ? DLT_SCOD_HEX : 0), v);
+        writeWithTypeInfo(DLT_TYPE_INFO_UINT | DLT_TYLE_8BIT | (isHexEnabled() ? DLT_SCOD_HEX : 0), v);
     }
 
     void write(int8_t v) {
-        writeRaw(DLT_TYPE_INFO_SINT | DLT_TYLE_8BIT, v);
+        writeWithTypeInfo(DLT_TYPE_INFO_SINT | DLT_TYLE_8BIT, v);
     }
 
     template <typename Type>
-    void writeRaw(uint32_t type, Type const& value) {
-        writeType(type);
-        writeBuffer(&value, sizeof(value));
+    void writeWithTypeInfo(uint32_t type, Type const& value) {
+        if (checkOverflow(sizeof(value) + sizeof(DltTypeInfo))) {
+            writeType(type);
+            writeBuffer(&value, sizeof(value));
+        }
     }
 
     void writeType(uint32_t type) {
-        memcpy(m_content.data() + m_contentSize, &type, sizeof(type));
-        m_contentSize += sizeof(type);
+        writeBuffer(&type, sizeof(type));
         args_num++;
     }
 
@@ -576,6 +606,8 @@ class DltCppLogData : public ::logging::LogData {
     DltLogLevelType m_dltLogLevel;
     bool m_enabled{false};
     uint8_t args_num = 0;
+
+    bool m_isFull{false};
 };
 
 } // namespace dlt
