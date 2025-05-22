@@ -8,8 +8,10 @@
 #include <sys/uio.h>
 #include <thread>
 
-// #define DEBUG_TRACE(format, ...) printf("%s:%d %s     " format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
-#define DEBUG_TRACE(format, ...)
+static constexpr auto PRINT_IPC_CONTENT = true;
+
+#define DEBUG_TRACE(format, ...) printf("%s:%d %s     " format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+//#define DEBUG_TRACE(format, ...)
 
 namespace logging {
 
@@ -87,7 +89,6 @@ typedef struct {
     char ctid[DLT_ID_SIZE];                                              /**< context id */
 } DLT_PACKED DltExtendedHeader;
 
-static constexpr auto ENABLE_DEBUG = false;
 template <typename Type>
 class span {
   public:
@@ -173,8 +174,8 @@ void to_iovec(iovec& iovec, Type const& type) {
     iovec.iov_base = const_cast<Type*>(&type);
     iovec.iov_len = sizeof(type);
 
-    if (ENABLE_DEBUG) {
-        printf("IVI: %s\n", binaryToHex(iovec.iov_base, iovec.iov_len));
+    if (PRINT_IPC_CONTENT) {
+        DEBUG_TRACE("IVI: %s\n", binaryToHex(iovec.iov_base, iovec.iov_len));
     }
 }
 
@@ -182,8 +183,8 @@ template <typename Type>
 void to_iovec(iovec& iovec, span<Type> const& type) {
     iovec.iov_base = const_cast<Type*>(type.data());
     iovec.iov_len = type.size();
-    if (ENABLE_DEBUG) {
-        printf("IVI: %s\n", binaryToHex(iovec.iov_base, iovec.iov_len));
+    if (PRINT_IPC_CONTENT) {
+        DEBUG_TRACE("IVI: %s\n", binaryToHex(iovec.iov_base, iovec.iov_len));
     }
 }
 
@@ -376,6 +377,8 @@ class DltCppLogData : public ::logging::LogData {
 
   public:
     using ContextType = DltCppContextClass;
+    using DltTypeInfo = uint32_t;
+    using DltStringLengthType = uint16_t;
 
     DltCppLogData() {
         DEBUG_TRACE("DltCppLogData() this= %p", (void*)this);
@@ -402,23 +405,19 @@ class DltCppLogData : public ::logging::LogData {
 
         if (isEnabled()) {
             if (m_context->isSourceCodeLocationInfoEnabled()) {
-                /*
-                dlt_user_log_write_utf8_string(this, "                                                    | ");
+                write("                                                    | ");
                 if (getData().getFileName() != nullptr)
-                    dlt_user_log_write_utf8_string(this, getData().getFileName());
+                    write(getData().getFileName());
                 if (getData().getLineNumber() != -1)
-                    dlt_user_log_write_uint32(this, getData().getLineNumber());
+                    write(getData().getLineNumber());
                 if (getData().getPrettyFunction() != nullptr)
-                    dlt_user_log_write_utf8_string(this, getData().getPrettyFunction());
-                    */
+                    write(getData().getPrettyFunction());
             }
 
             if (m_context->isThreadInfoEnabled()) {
-                /*
-                dlt_user_log_write_string(this, "ThreadID");
-                dlt_user_log_write_uint8(this, getThreadInformation().getID());
-                dlt_user_log_write_string(this, getThreadInformation().getName());
-                */
+                write("ThreadID");
+                write(getThreadInformation().getID());
+                write(getThreadInformation().getName());
             }
 
             sendLog();
@@ -443,11 +442,12 @@ class DltCppLogData : public ::logging::LogData {
 
         DltStandardHeaderExtra headerextra{};
         headerextra.seid = (uint32_t)getpid();
+        headerextra.seid = 555;
         headerextra.tmsp = dlt_uptime();
 
         DltExtendedHeader extendedheader = m_context->extendedHeader;
         extendedheader.msin |= (uint8_t)((m_dltLogLevel << DLT_MSIN_MTIN_SHIFT) & DLT_MSIN_MTIN);
-        extendedheader.noar = args_num; /* number of arguments */
+        extendedheader.noar = m_argsCount; /* number of arguments */
 
         uint16_t standardheaderLen =
             sizeof(DltStandardHeader) + sizeof(DltExtendedHeader) + DLT_STANDARD_HEADER_EXTRA_SIZE(standardheader.htyp) + m_contentSize;
@@ -470,38 +470,41 @@ class DltCppLogData : public ::logging::LogData {
         return m_data->isHexEnabled();
     }
 
-    template <typename... Args>
-    void writeFormatted(char const* format, Args... args) {
-        if (m_enabled) {
-            std::array<char, 65536> buffer;
-
-#pragma GCC diagnostic push
-            // Make sure GCC does not complain about not being able to check the format string since it is no literal string
-#pragma GCC diagnostic ignored "-Wformat-security"
-            snprintf(buffer.data(), std::tuple_size_v<decltype(buffer)>, format, args...);
-#pragma GCC diagnostic pop
-
-            write(buffer.data());
-        }
-    }
-
-    void write(bool v) {
-        writeWithTypeInfo(DLT_TYPE_INFO_BOOL, v);
-    }
-
-    void write(char const* v) {
-        write(v, strlen(v));
-    }
-
     bool checkOverflow(size_t additionalSize) {
         auto const newSize = m_contentSize + additionalSize;
         if (newSize >= m_content.size()) {
             m_contentSize = 0;
+            m_argsCount = 0;
             write("DLT message too large");
             m_isFull = true;
             printf("DLT message too large\n");
         }
         return not m_isFull;
+    }
+
+    template <typename... Args>
+    void writeFormatted(char const* format, Args... args) {
+        if (checkOverflow(sizeof(DltStringLengthType) + sizeof(DltTypeInfo))) {
+            writeType(DLT_TYPE_INFO_STRG | DLT_SCOD_UTF8);
+            auto actualSize = reinterpret_cast<DltStringLengthType*>(m_content.data() + m_contentSize);
+            m_contentSize += sizeof(DltStringLengthType);
+
+            auto const maxLength = m_content.size() - m_contentSize;
+
+#pragma GCC diagnostic push
+            // Make sure GCC does not complain about not being able to check the format string since it is no literal string
+#pragma GCC diagnostic ignored "-Wformat-security"
+            *actualSize = snprintf(m_content.data() + m_contentSize, maxLength, format, args...);
+#pragma GCC diagnostic pop
+
+            if (checkOverflow(*actualSize + 1)) {
+                m_contentSize += *actualSize + 1;
+            }
+        }
+    }
+
+    void write(char const* v) {
+        write(v, strlen(v));
     }
 
     void writeBuffer(void const* v, size_t size) {
@@ -511,12 +514,10 @@ class DltCppLogData : public ::logging::LogData {
         }
     }
 
-    using DltTypeInfo = uint32_t;
-
     void write(char const* v, size_t size) {
-        if (checkOverflow(size + 1 + sizeof(uint16_t) + sizeof(DltTypeInfo))) {
+        if (checkOverflow(size + 1 + sizeof(DltStringLengthType) + sizeof(DltTypeInfo))) {
             writeType(DLT_TYPE_INFO_STRG | DLT_SCOD_UTF8);
-            uint16_t const sizeAsUint16 = static_cast<uint16_t>(size) + 1;
+            DltStringLengthType const sizeAsUint16 = static_cast<DltStringLengthType>(size) + 1;
             writeBuffer(&sizeAsUint16, sizeof(sizeAsUint16));
             writeBuffer(v, size);
             static constexpr char nullTermination = 0;
@@ -530,6 +531,10 @@ class DltCppLogData : public ::logging::LogData {
 
     void write(std::string const& v) {
         write(v.c_str(), v.size());
+    }
+
+    void write(bool v) {
+        writeWithTypeInfo(DLT_TYPE_INFO_BOOL, v);
     }
 
     void write(float f) {
@@ -585,16 +590,16 @@ class DltCppLogData : public ::logging::LogData {
     }
 
     template <typename Type>
-    void writeWithTypeInfo(uint32_t type, Type const& value) {
+    void writeWithTypeInfo(DltTypeInfo type, Type const& value) {
         if (checkOverflow(sizeof(value) + sizeof(DltTypeInfo))) {
             writeType(type);
             writeBuffer(&value, sizeof(value));
         }
     }
 
-    void writeType(uint32_t type) {
+    void writeType(DltTypeInfo type) {
         writeBuffer(&type, sizeof(type));
-        args_num++;
+        m_argsCount++;
     }
 
   private:
@@ -608,7 +613,7 @@ class DltCppLogData : public ::logging::LogData {
 
     DltLogLevelType m_dltLogLevel;
     bool m_enabled{false};
-    uint8_t args_num = 0;
+    uint8_t m_argsCount = 0;
 
     bool m_isFull{false};
 };
