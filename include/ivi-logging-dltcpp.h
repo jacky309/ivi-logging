@@ -10,8 +10,10 @@
 
 static constexpr auto PRINT_IPC_CONTENT = true;
 
-#define DEBUG_TRACE(format, ...) printf("%s:%d %s     " format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
-//#define DEBUG_TRACE(format, ...)
+// #define DEBUG_IPC_TRACE(format, ...) printf("" format "\n", ##__VA_ARGS__)
+// #define DEBUG_TRACE(format, ...) printf("%s:%d %s     " format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+#define DEBUG_TRACE(format, ...)
+#define DEBUG_IPC_TRACE(format, ...)
 
 namespace logging {
 
@@ -173,19 +175,14 @@ template <typename Type>
 void to_iovec(iovec& iovec, Type const& type) {
     iovec.iov_base = const_cast<Type*>(&type);
     iovec.iov_len = sizeof(type);
-
-    if (PRINT_IPC_CONTENT) {
-        DEBUG_TRACE("IVI: %s\n", binaryToHex(iovec.iov_base, iovec.iov_len));
-    }
+    DEBUG_IPC_TRACE("IVI: %s", binaryToHex(iovec.iov_base, iovec.iov_len));
 }
 
 template <typename Type>
-void to_iovec(iovec& iovec, span<Type> const& type) {
-    iovec.iov_base = const_cast<Type*>(type.data());
-    iovec.iov_len = type.size();
-    if (PRINT_IPC_CONTENT) {
-        DEBUG_TRACE("IVI: %s\n", binaryToHex(iovec.iov_base, iovec.iov_len));
-    }
+void to_iovec(iovec& iovec, span<Type> const& buffer) {
+    iovec.iov_base = const_cast<Type*>(buffer.data());
+    iovec.iov_len = buffer.size();
+    DEBUG_IPC_TRACE("IVI: %s", binaryToHex(iovec.iov_base, iovec.iov_len));
 }
 
 class DltCppContextClass;
@@ -368,7 +365,7 @@ class DltCppContextClass : public LogContextBase {
     DltExtendedHeader extendedHeader{};
     std::atomic<int> m_messageCount{0};
 
-    DltLogLevelType m_activeLogLevel{DltLogLevelType::DLT_LOG_MAX};
+    DltLogLevelType m_activeLogLevel{DltLogLevelType::DLT_LOG_DEBUG};
 
     friend class DltCppLogData;
 };
@@ -389,6 +386,10 @@ class DltCppLogData : public ::logging::LogData {
         m_context = &context;
         m_dltLogLevel = m_context->getDLTLogLevel(getData().getLogLevel());
         m_enabled = context.isEnabled(getData().getLogLevel());
+
+#ifndef NDEBUG
+        m_content.fill(-1);
+#endif
 
         DEBUG_TRACE("m_context = %p", (void*)m_context);
 
@@ -435,14 +436,11 @@ class DltCppLogData : public ::logging::LogData {
     void sendLog() {
         DEBUG_TRACE("m_context = %p\n", (void*)m_context);
 
-        DltUserHeader userHeader{.message = MessageType::SendLog};
-
         DltStandardHeader standardheader{};
         standardheader.mcnt = m_context->messageCounter();
 
         DltStandardHeaderExtra headerextra{};
         headerextra.seid = (uint32_t)getpid();
-        headerextra.seid = 555;
         headerextra.tmsp = dlt_uptime();
 
         DltExtendedHeader extendedheader = m_context->extendedHeader;
@@ -453,7 +451,7 @@ class DltCppLogData : public ::logging::LogData {
             sizeof(DltStandardHeader) + sizeof(DltExtendedHeader) + DLT_STANDARD_HEADER_EXTRA_SIZE(standardheader.htyp) + m_contentSize;
         standardheader.len = htons(standardheaderLen);
 
-        DaemonConnection::getInstance().send(userHeader, standardheader, headerextra, extendedheader, span(m_content.data(), m_contentSize));
+        DaemonConnection::getInstance().send(sendLogUserHeader, standardheader, headerextra, extendedheader, span(m_content.data(), m_contentSize));
 
         DEBUG_TRACE("m_context = %p", (void*)m_context);
     }
@@ -489,16 +487,20 @@ class DltCppLogData : public ::logging::LogData {
             auto actualSize = reinterpret_cast<DltStringLengthType*>(m_content.data() + m_contentSize);
             m_contentSize += sizeof(DltStringLengthType);
 
+            *actualSize = 0x0102;
+
             auto const maxLength = m_content.size() - m_contentSize;
 
 #pragma GCC diagnostic push
             // Make sure GCC does not complain about not being able to check the format string since it is no literal string
 #pragma GCC diagnostic ignored "-Wformat-security"
-            *actualSize = snprintf(m_content.data() + m_contentSize, maxLength, format, args...);
+            auto const stringSize = snprintf(m_content.data() + m_contentSize, maxLength, format, args...);
+            *actualSize = stringSize + 1;
+
 #pragma GCC diagnostic pop
 
             if (checkOverflow(*actualSize + 1)) {
-                m_contentSize += *actualSize + 1;
+                m_contentSize += *actualSize;
             }
         }
     }
@@ -526,7 +528,7 @@ class DltCppLogData : public ::logging::LogData {
     }
 
     void write(std::string_view v) {
-        write(std::string{v});
+        write(v.data(), v.size());
     }
 
     void write(std::string const& v) {
@@ -616,6 +618,8 @@ class DltCppLogData : public ::logging::LogData {
     uint8_t m_argsCount = 0;
 
     bool m_isFull{false};
+
+    static constexpr DltUserHeader sendLogUserHeader{.message = MessageType::SendLog};
 };
 
 } // namespace dlt
