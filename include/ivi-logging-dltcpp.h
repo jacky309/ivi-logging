@@ -8,10 +8,9 @@
 #include <sys/uio.h>
 #include <thread>
 
-static constexpr auto PRINT_IPC_CONTENT = true;
-
 // #define DEBUG_IPC_TRACE(format, ...) printf("" format "\n", ##__VA_ARGS__)
 // #define DEBUG_TRACE(format, ...) printf("%s:%d %s     " format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+#define DEBUG_INCOMING(format, ...)  printf("%s:%d %s     " format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 #define DEBUG_TRACE(format, ...)
 #define DEBUG_IPC_TRACE(format, ...)
 
@@ -216,12 +215,12 @@ class DaemonConnection {
             switch (userHeader->message) {
                 case MessageType::DLT_USER_MESSAGE_LOG_STATE: {
                     //                    auto const logLevelMsg = reinterpret_cast<DltUserControlMsgLogState const*>(message);
-                    DEBUG_TRACE("received DltUserControlMsgLogState");
+                    DEBUG_INCOMING("received DltUserControlMsgLogState");
                 } break;
 
                 case MessageType::DLT_USER_MESSAGE_LOG_LEVEL: {
                     auto const logLevelMsg = reinterpret_cast<DltUserControlMsgLogLevel const*>(message);
-                    DEBUG_TRACE("received DltUserControlMsgLogLevel %d pos:%d", logLevelMsg->log_level, logLevelMsg->log_level_pos);
+                    DEBUG_INCOMING("received DltUserControlMsgLogLevel %d pos:%d", logLevelMsg->log_level, logLevelMsg->log_level_pos);
                     applyLogLevel(*logLevelMsg);
                 }
 
