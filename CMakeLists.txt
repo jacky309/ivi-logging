@@ -13,18 +13,23 @@ SET( PROJECT_PATCH_LEVEL 0 )
 set(VERSION ${PROJECT_MAJOR_VERSION}.${PROJECT_MINOR_VERSION}.${PROJECT_PATCH_LEVEL})
 set(PACKAGE_VERSION ${VERSION})
 
-OPTION( ENABLE_DLT_BACKEND "Include DLT as default logging backend" OFF )
+OPTION( ENABLE_DLTCPP_BACKEND "Include DLT CPP as default logging backend" OFF )
+OPTION( ENABLE_DLT_BACKEND "Include DLT as default logging backend" ${ENABLE_DLTCPP_BACKEND})
 OPTION( ENABLE_CONSOLE_BACKEND "Include console as default logging backend" ON )
 OPTION( ENABLE_EXAMPLES "Build examples" ON )
 OPTION( ENABLE_TESTS "Build tests" ON )
 
 # Dependencies
 if (ENABLE_DLT_BACKEND)
-	set(ADDITIONAL_PKGCONFIG_DEPENDENCIES automotive-dlt)
-	set(BACKEND_DEFINES "#define IVI_LOGGING_DLT_AVAILABLE")
-#    list(APPEND BACKEND_CLASSES DltContextClass)
-	list(APPEND BACKEND_CLASSES DltCppContextClass)
+    set(ADDITIONAL_PKGCONFIG_DEPENDENCIES automotive-dlt)
+    set(BACKEND_DEFINES "#define IVI_LOGGING_DLT_AVAILABLE")
     set(DLT_FOUND ON)
+
+    if (ENABLE_DLTCPP_BACKEND)
+        list(APPEND BACKEND_CLASSES DltCppContextClass)
+    else()
+        list(APPEND BACKEND_CLASSES DltContextClass)
+    endif()
 endif()
 
 foreach(CLASS ${BACKEND_CLASSES})
