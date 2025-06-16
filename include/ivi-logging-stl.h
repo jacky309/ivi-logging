@@ -10,6 +10,7 @@
 #include <iostream>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -64,6 +65,11 @@ logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::map<KeyT
 
 template <typename KeyType, typename ValueType, class LogType>
 logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::unordered_map<KeyType, ValueType> const& v) {
+    return streamArrayType(log, v);
+}
+
+template <typename ElementType, class LogType>
+logging::enable_if_logging_type<LogType> operator<<(LogType&& log, std::set<ElementType> const& v) {
     return streamArrayType(log, v);
 }
 
