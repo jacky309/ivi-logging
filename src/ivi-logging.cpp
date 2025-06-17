@@ -14,7 +14,7 @@ namespace logging {
 
 AppLogContext* s_pAppLogContext = nullptr;
 
-LogLevel ConsoleLogContext::s_defaultLogLevel = LogLevel::All;
+LogLevel ConsoleLogContext::s_defaultLogLevel = LogLevel::Debug;
 bool ConsoleLogContext::s_envVarCheckDone = false;
 
 std::mutex streamLogContextAbstractOutputMutex;
@@ -178,6 +178,7 @@ ConsoleLogContext::ConsoleLogContext() {
         }
         s_envVarCheckDone = true;
     }
+    setLogLevel(s_defaultLogLevel);
 }
 
 char const* LogInfo::getFileName() const {
