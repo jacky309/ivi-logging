@@ -386,14 +386,40 @@ class DltCppLogData : public ::logging::LogData {
         return m_data->isHexEnabled();
     }
 
-    bool checkOverflow(size_t additionalSize) {
-        auto const newSize = m_contentSize + additionalSize;
-        if (newSize >= m_content.size()) {
-            m_contentSize = 0;
-            m_argsCount = 0;
-            write("DLT message too large");
+    size_t getAvailableSpace(size_t infoSize) const {
+        if (not m_isFull and (maxContentSize - m_contentSize >= infoSize)) {
+            return maxContentSize - m_contentSize - infoSize;
+        } else {
+            return 0;
+        }
+    }
+
+    static constexpr size_t messageTooLargeStringLength = 12;
+
+    struct __attribute__((packed)) MessageTooLargeData {
+        DltTypeInfo const info{DLT_TYPE_INFO_STRG | DLT_SCOD_UTF8};
+        DltStringLengthType length = messageTooLargeStringLength;
+        char const message[messageTooLargeStringLength]{'.', '.', 't', 'r', 'u', 'n', 'c', 'a', 't', 'e', 'd', 0};
+    };
+
+    void addMessageTooLargeIndication() {
+        if (not m_isFull) {
+
+            MessageTooLargeData data;
+            memcpy(m_content.data() + m_contentSize, &data, sizeof(data));
+            m_contentSize += sizeof(data);
+
+            m_argsCount++;
+
             m_isFull = true;
             printf("DLT message too large\n");
+        }
+    }
+
+    bool checkOverflow(size_t additionalSize) {
+        if (not m_isFull and getAvailableSpace(additionalSize) == 0) {
+
+            addMessageTooLargeIndication();
         }
         return not m_isFull;
     }
@@ -405,7 +431,7 @@ class DltCppLogData : public ::logging::LogData {
             auto actualSize = reinterpret_cast<DltStringLengthType*>(m_content.data() + m_contentSize);
             m_contentSize += sizeof(DltStringLengthType);
 
-            auto const maxLength = m_content.size() - m_contentSize;
+            auto const maxLength = maxContentSize - m_contentSize;
 
 #pragma GCC diagnostic push
             // Make sure GCC does not complain about not being able to check the format string since it is no literal string
@@ -433,13 +459,20 @@ class DltCppLogData : public ::logging::LogData {
     }
 
     void write(char const* v, size_t size) {
-        if (checkOverflow(size + 1 + sizeof(DltStringLengthType) + sizeof(DltTypeInfo))) {
+        auto const spaceForStringContent = std::min(size, getAvailableSpace(sizeof(DltStringLengthType) + sizeof(DltTypeInfo) + 1));
+
+        if (spaceForStringContent > 0) {
             writeType(DLT_TYPE_INFO_STRG | DLT_SCOD_UTF8);
-            DltStringLengthType const sizeAsUint16 = static_cast<DltStringLengthType>(size) + 1;
+            DltStringLengthType const sizeAsUint16 = static_cast<DltStringLengthType>(spaceForStringContent) + 1;
             writeBuffer(&sizeAsUint16, sizeof(sizeAsUint16));
-            writeBuffer(v, size);
+            writeBuffer(v, spaceForStringContent);
             static constexpr char nullTermination = 0;
-            writeBuffer(&nullTermination, 1);
+            writeBuffer(&nullTermination, sizeof(nullTermination));
+        }
+
+        if (spaceForStringContent < size) {
+            // Nos space left for the whole string
+            addMessageTooLargeIndication();
         }
     }
 
@@ -521,7 +554,9 @@ class DltCppLogData : public ::logging::LogData {
     }
 
   private:
-    std::array<char, 2048> m_content;
+    static constexpr size_t maxContentSize = 2048 - sizeof(MessageTooLargeData);
+    std::array<char, maxContentSize + sizeof(MessageTooLargeData)> m_content;
+
     size_t m_contentSize{0};
 
     DltCppContextClass* m_context{};
