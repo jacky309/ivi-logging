@@ -4,6 +4,15 @@
 #include <thread>
 #include <vector>
 
+// #define IVILOGGING_DLT_DEBUG_INCOMINGDEBUG_IPC_TRACE(format, ...) printf("" format "\n", ##__VA_ARGS__)
+// #define IVILOGGING_DLT_DEBUG_INCOMING(format, ...) printf("%s:%d %s     " format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+#define IVILOGGING_DLT_DEBUG_INCOMING(format, ...)
+// #define IVILOGGING_DLT_DEBUG_TRACE(format, ...) printf("IVI: %s:%d %s" format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+// #define IVILOGGING_DLT_DEBUG_TRACE(format, ...) printf("IVI: %s:%d %s" format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+#define IVILOGGING_DLT_DEBUG_TRACE(format, ...)
+// #define IVILOGGING_DLT_DEBUG_IPC_TRACE(format, ...) printf(format "\n", ##__VA_ARGS__)
+#define IVILOGGING_DLT_DEBUG_IPC_TRACE(format, ...)
+
 namespace logging::dlt {
 
 static char const* dlt_daemon_fifo = "/tmp/dlt";
@@ -11,10 +20,117 @@ static char const* dltFifoBaseDir = "/tmp/dltpipes";
 
 static auto const pid = getpid();
 
+template <typename Type>
+class span {
+  public:
+    span(Type const* data, size_t size) : m_data{data}, m_size{size} {
+    }
+
+    Type const* data() const {
+        return m_data;
+    }
+
+    size_t size() const {
+        return m_size;
+    }
+
+    Type const* m_data;
+    size_t m_size;
+};
+
+inline char printableAscii(char c) {
+    if ((c > 32) && (c < 126)) {
+        return c;
+    } else
+        return '.';
+}
+
+inline char* binaryToHex(void const* inSt, size_t inSize) {
+    static thread_local char out[65535];
+    auto const inStr = reinterpret_cast<unsigned char const*>(inSt);
+    static char hex[] = "0123456789ABCDEF";
+    size_t outIndex = 0;
+    for (size_t i = 0; i < inSize; i++) {
+        out[outIndex++] = hex[inStr[i] >> 4];
+        out[outIndex++] = hex[inStr[i] & 0xF];
+        out[outIndex++] = ' ';
+    }
+
+    out[outIndex++] = ' ';
+    out[outIndex++] = '|';
+    out[outIndex++] = ' ';
+
+    for (size_t i = 0; i < inSize; i++) {
+        out[outIndex++] = printableAscii(inStr[i]);
+        out[outIndex++] = ' ';
+    }
+
+    out[outIndex++] = 0;
+    return out;
+}
+
+template <typename Type>
+void to_iovec(iovec& iovec, Type const& type) {
+    iovec.iov_base = const_cast<Type*>(&type);
+    iovec.iov_len = sizeof(type);
+    IVILOGGING_DLT_DEBUG_IPC_TRACE("IVI: %s", binaryToHex(iovec.iov_base, iovec.iov_len));
+}
+
+template <typename Type>
+void to_iovec(iovec& iovec, span<Type> const& buffer) {
+    iovec.iov_base = const_cast<Type*>(buffer.data());
+    iovec.iov_len = buffer.size();
+    IVILOGGING_DLT_DEBUG_IPC_TRACE("IVI: %s", binaryToHex(iovec.iov_base, iovec.iov_len));
+}
+
+uint32_t dlt_uptime(void) {
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
+        return (uint32_t)ts.tv_sec * 10000 + (uint32_t)ts.tv_nsec / 100000; /* in 0.1 ms = 100 us */
+    else
+        return 0;
+}
+
 DaemonConnection& DaemonConnection::getInstance() {
     static DaemonConnection instance;
     instance.init();
     return instance;
+}
+
+void DltCppLogData::addMessageTooLargeIndication() {
+    if (not m_isFull) {
+        MessageTooLargeData data;
+        memcpy(m_content.data() + m_contentSize, &data, sizeof(data));
+        m_contentSize += sizeof(data);
+
+        m_argsCount++;
+
+        m_isFull = true;
+        printf("DLT message too large\n");
+    }
+}
+
+DltCppLogData::~DltCppLogData() {
+
+    if (isEnabled()) {
+        if (m_context->isSourceCodeLocationInfoEnabled()) {
+            write("                                                    | ");
+            if (getData().getFileName() != nullptr)
+                write(getData().getFileName());
+            if (getData().getLineNumber() != -1)
+                write(getData().getLineNumber());
+            if (getData().getPrettyFunction() != nullptr)
+                write(getData().getPrettyFunction());
+        }
+
+        if (m_context->isThreadInfoEnabled()) {
+            write("ThreadID");
+            write(getThreadInformation().getID());
+            write(getThreadInformation().getName());
+        }
+
+        DaemonConnection::getInstance().sendLog(*this);
+    }
 }
 
 static std::vector<DltCppContextClass*> contexts;
@@ -220,6 +336,11 @@ void DaemonConnection::init() {
             };
         });
     }
+}
+
+void DltCppContextClass::setActiveLogLevel(DltLogLevelType activeLogLevel) {
+    m_activeLogLevel = activeLogLevel;
+    IVILOGGING_DLT_DEBUG_TRACE("Log level for context: %s set to %d", this->m_context->getID(), activeLogLevel);
 }
 
 } // namespace logging::dlt

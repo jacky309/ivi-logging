@@ -8,15 +8,6 @@
 #include <sys/uio.h>
 #include <thread>
 
-// #define IVILOGGING_DLT_DEBUG_INCOMINGDEBUG_IPC_TRACE(format, ...) printf("" format "\n", ##__VA_ARGS__)
-// #define IVILOGGING_DLT_DEBUG_INCOMING(format, ...) printf("%s:%d %s     " format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
-#define IVILOGGING_DLT_DEBUG_INCOMING(format, ...)
-// #define IVILOGGING_DLT_DEBUG_TRACE(format, ...) printf("IVI: %s:%d %s" format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
-// #define IVILOGGING_DLT_DEBUG_TRACE(format, ...) printf("IVI: %s:%d %s" format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
-#define IVILOGGING_DLT_DEBUG_TRACE(format, ...)
-// #define IVILOGGING_DLT_DEBUG_IPC_TRACE(format, ...) printf(format "\n", ##__VA_ARGS__)
-#define IVILOGGING_DLT_DEBUG_IPC_TRACE(format, ...)
-
 namespace logging {
 
 namespace dlt {
@@ -93,101 +84,10 @@ typedef struct {
     char ctid[DLT_ID_SIZE];                                              /**< context id */
 } __attribute__((packed)) DltExtendedHeader;
 
-template <typename Type>
-class span {
-  public:
-    span(Type const* data, size_t size) : m_data{data}, m_size{size} {
-    }
-
-    Type const* data() const {
-        return m_data;
-    }
-
-    size_t size() const {
-        return m_size;
-    }
-
-    Type const* m_data;
-    size_t m_size;
-};
-
 class DltCppLogData;
 
-/**
- * Call the given function with each element of the given tuple
- */
-template <std::size_t I = 0, typename FuncT, typename... Tp>
-inline void for_each(std::tuple<Tp...>& t, FuncT f) {
-    if constexpr (I < sizeof...(Tp)) {
-        f.template operator()<I>(std::get<I>(t));
-        for_each<I + 1, FuncT, Tp...>(t, f);
-    }
-}
-
-struct pass {
-    template <typename... T>
-    pass(T...) {
-    }
-};
-
-template <typename... Args>
-void h(Args... args) {
-    size_t const nargs = sizeof...(args); // get number of args
-    iovec x_array[nargs];                 // create X array of that size
-
-    iovec* x = x_array;
-    int unused[]{(f(*x++, args), 1)...}; // call f
-    pass{unused};
-
-    g(x_array, nargs); // call g with x_array
-}
-
-inline char printableAscii(char c) {
-    if ((c > 32) && (c < 126)) {
-        return c;
-    } else
-        return '.';
-}
-
-inline char* binaryToHex(void const* inSt, size_t inSize) {
-    static thread_local char out[65535];
-    auto const inStr = reinterpret_cast<unsigned char const*>(inSt);
-    static char hex[] = "0123456789ABCDEF";
-    size_t outIndex = 0;
-    for (size_t i = 0; i < inSize; i++) {
-        out[outIndex++] = hex[inStr[i] >> 4];
-        out[outIndex++] = hex[inStr[i] & 0xF];
-        out[outIndex++] = ' ';
-    }
-
-    out[outIndex++] = ' ';
-    out[outIndex++] = '|';
-    out[outIndex++] = ' ';
-
-    for (size_t i = 0; i < inSize; i++) {
-        out[outIndex++] = printableAscii(inStr[i]);
-        out[outIndex++] = ' ';
-    }
-
-    out[outIndex++] = 0;
-    return out;
-}
-
-template <typename Type>
-void to_iovec(iovec& iovec, Type const& type) {
-    iovec.iov_base = const_cast<Type*>(&type);
-    iovec.iov_len = sizeof(type);
-    IVILOGGING_DLT_DEBUG_IPC_TRACE("IVI: %s", binaryToHex(iovec.iov_base, iovec.iov_len));
-}
-
-template <typename Type>
-void to_iovec(iovec& iovec, span<Type> const& buffer) {
-    iovec.iov_base = const_cast<Type*>(buffer.data());
-    iovec.iov_len = buffer.size();
-    IVILOGGING_DLT_DEBUG_IPC_TRACE("IVI: %s", binaryToHex(iovec.iov_base, iovec.iov_len));
-}
-
 class DltCppContextClass;
+
 class DaemonConnection {
   public:
     static DaemonConnection& getInstance();
@@ -242,7 +142,6 @@ class DltCppContextClass : public LogContextBase {
 
     void setParentContext(LogContextCommon& context) {
         m_context = &context;
-        IVILOGGING_DLT_DEBUG_TRACE("m_context = %p", (void*)m_context);
     }
 
     bool isEnabled(LogLevel logLevel) const {
@@ -294,15 +193,7 @@ class DltCppContextClass : public LogContextBase {
         DaemonConnection::getInstance().registerContext(*this);
     }
 
-    static bool& isDLTAppRegistered() {
-        static bool m_appRegistered = false;
-        return m_appRegistered;
-    }
-
-    void setActiveLogLevel(DltLogLevelType activeLogLevel) {
-        m_activeLogLevel = activeLogLevel;
-        IVILOGGING_DLT_DEBUG_TRACE("Log level for context: %s set to %d", this->m_context->getID(), activeLogLevel);
-    }
+    void setActiveLogLevel(DltLogLevelType activeLogLevel);
 
   private:
     LogContextCommon* m_context = nullptr;
@@ -340,36 +231,7 @@ class DltCppLogData : public ::logging::LogData {
 #endif
     }
 
-    virtual ~DltCppLogData() {
-
-        if (isEnabled()) {
-            if (m_context->isSourceCodeLocationInfoEnabled()) {
-                write("                                                    | ");
-                if (getData().getFileName() != nullptr)
-                    write(getData().getFileName());
-                if (getData().getLineNumber() != -1)
-                    write(getData().getLineNumber());
-                if (getData().getPrettyFunction() != nullptr)
-                    write(getData().getPrettyFunction());
-            }
-
-            if (m_context->isThreadInfoEnabled()) {
-                write("ThreadID");
-                write(getThreadInformation().getID());
-                write(getThreadInformation().getName());
-            }
-
-            DaemonConnection::getInstance().sendLog(*this);
-        }
-    }
-
-    uint32_t dlt_uptime(void) {
-        struct timespec ts;
-        if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
-            return (uint32_t)ts.tv_sec * 10000 + (uint32_t)ts.tv_nsec / 100000; /* in 0.1 ms = 100 us */
-        else
-            return 0;
-    }
+    virtual ~DltCppLogData();
 
     LogInfo const& getData() const {
         return *m_data;
@@ -399,23 +261,10 @@ class DltCppLogData : public ::logging::LogData {
         char const message[messageTooLargeStringLength]{'.', '.', 't', 'r', 'u', 'n', 'c', 'a', 't', 'e', 'd', 0};
     };
 
-    void addMessageTooLargeIndication() {
-        if (not m_isFull) {
-
-            MessageTooLargeData data;
-            memcpy(m_content.data() + m_contentSize, &data, sizeof(data));
-            m_contentSize += sizeof(data);
-
-            m_argsCount++;
-
-            m_isFull = true;
-            printf("DLT message too large\n");
-        }
-    }
+    void addMessageTooLargeIndication();
 
     bool checkOverflow(size_t additionalSize) {
         if (not m_isFull and getAvailableSpace(additionalSize) == 0) {
-
             addMessageTooLargeIndication();
         }
         return not m_isFull;

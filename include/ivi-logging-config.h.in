@@ -6,8 +6,11 @@
 
 @BACKEND_DEFINES@
 
-#ifdef IVI_LOGGING_DLT_AVAILABLE
+#ifdef IVI_LOGGING_DLT_ENABLED
 #include "ivi-logging-dlt.h"
+#endif
+
+#ifdef IVI_LOGGING_DLTCPP_ENABLED
 #include "ivi-logging-dltcpp.h"
 #endif
 

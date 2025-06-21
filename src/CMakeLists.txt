@@ -11,9 +11,13 @@ set(HEADER_FILES
 	ivi-no-logging.h
 )
 
-if (${DLT_FOUND})
-	list(APPEND HEADER_FILES ivi-logging-dlt.h ivi-logging-dltcpp.h)
-	set(DLT_LIBRARY_FILES ivi-logging-dltcpp.cpp)
+if(ENABLE_DLT_BACKEND)
+	list(APPEND HEADER_FILES ivi-logging-dlt.h)
+endif()
+
+if(ENABLE_DLTCPP_BACKEND)
+	list(APPEND DLT_LIBRARY_FILES ivi-logging-dltcpp.cpp)
+	list(APPEND HEADER_FILES ivi-logging-dltcpp.h)
 endif()
 
 add_library(${LIB_NAME} SHARED

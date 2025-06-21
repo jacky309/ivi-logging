@@ -13,22 +13,31 @@ SET( PROJECT_PATCH_LEVEL 0 )
 set(VERSION ${PROJECT_MAJOR_VERSION}.${PROJECT_MINOR_VERSION}.${PROJECT_PATCH_LEVEL})
 set(PACKAGE_VERSION ${VERSION})
 
-OPTION( ENABLE_DLTCPP_BACKEND "Include DLT CPP as default logging backend" OFF )
-OPTION( ENABLE_DLT_BACKEND "Include DLT as default logging backend" ${ENABLE_DLTCPP_BACKEND})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+OPTION( ENABLE_DLTCPP_BACKEND "Include DLT CPP as default logging backend" OFF)
+OPTION( ENABLE_DLT_BACKEND "Include DLT as default logging backend" OFF)
 OPTION( ENABLE_CONSOLE_BACKEND "Include console as default logging backend" ON )
 OPTION( ENABLE_EXAMPLES "Build examples" ON )
 OPTION( ENABLE_TESTS "Build tests" ON )
 
+# Disable DLT backend if DLT-CPP backend is enabled
+if(ENABLE_DLTCPP_BACKEND)
+    set(ENABLE_DLT_BACKEND OFF)
+endif()
+
 # Dependencies
-if (ENABLE_DLT_BACKEND)
+if (ENABLE_DLT_BACKEND OR ENABLE_DLTCPP_BACKEND)
     set(ADDITIONAL_PKGCONFIG_DEPENDENCIES automotive-dlt)
-    set(BACKEND_DEFINES "#define IVI_LOGGING_DLT_AVAILABLE")
-    set(DLT_FOUND ON)
 
     if (ENABLE_DLTCPP_BACKEND)
         list(APPEND BACKEND_CLASSES DltCppContextClass)
-    else()
+        string(APPEND BACKEND_DEFINES "#define IVI_LOGGING_DLTCPP_ENABLED\n")
+    endif()
+    if (ENABLE_DLT_BACKEND)
         list(APPEND BACKEND_CLASSES DltContextClass)
+        string(APPEND BACKEND_DEFINES "#define IVI_LOGGING_DLT_ENABLED\n")
     endif()
 endif()
 
