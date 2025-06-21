@@ -23,8 +23,6 @@ namespace dlt {
 
 enum class MessageType : uint32_t { SendLog = 1, RegisterApp = 2, RegisterContext = 4, DLT_USER_MESSAGE_LOG_STATE = 12, DLT_USER_MESSAGE_LOG_LEVEL = 6 };
 
-#pragma pack(1)
-
 /**
  * This is the internal message content to exchange control msg log level information between application and daemon.
  */
@@ -32,22 +30,22 @@ typedef struct {
     uint8_t log_level;     /**< log level */
     uint8_t trace_status;  /**< trace status */
     int32_t log_level_pos; /**< offset in management structure on user-application side */
-} DLT_PACKED DltUserControlMsgLogLevel;
+} __attribute__((packed)) DltUserControlMsgLogLevel;
 
 typedef struct {
     int8_t log_state; /**< the state to be used for logging state: 0 = off, 1 = external client connected */
-} DLT_PACKED DltUserControlMsgLogState;
+} __attribute__((packed)) DltUserControlMsgLogState;
 
 typedef struct {
     char pattern[DLT_ID_SIZE]{'D', 'U', 'H', 1}; /**< This pattern should be DUH0x01 */
     MessageType message;                         /**< messsage info */
-} DLT_PACKED DltUserHeader;
+} __attribute__((packed)) DltUserHeader;
 
 typedef struct {
     char apid[DLT_ID_SIZE]{};    /**< application id */
     pid_t pid;                   /**< process id of user application */
     uint32_t description_length; /**< length of description */
-} DLT_PACKED DltUserControlMsgRegisterApplication;
+} __attribute__((packed)) DltUserControlMsgRegisterApplication;
 
 typedef struct {
     char apid[DLT_ID_SIZE]{};    /**< application id */
@@ -57,14 +55,14 @@ typedef struct {
     int8_t trace_status{};       /**< trace status */
     pid_t pid;                   /**< process id of user application */
     uint32_t description_length; /**< length of description */
-} DLT_PACKED DltUserControlMsgRegisterContext;
+} __attribute__((packed)) DltUserControlMsgRegisterContext;
 
 typedef struct {
     char pattern[DLT_ID_SIZE]{'D', 'L', 'T', 1}; /**< This pattern should be DLT0x01 */
     uint32_t seconds;                            /**< seconds since 1.1.1970 */
     int32_t microseconds;                        /**< Microseconds */
     char ecu[DLT_ID_SIZE]{'E', 'C', 'U', '1'};   /**< The ECU id is added, if it is not already in the DLT message itself */
-} DLT_PACKED DltStorageHeader;
+} __attribute__((packed)) DltStorageHeader;
 
 /**
  * The structure of the DLT standard header. This header is used in each DLT message.
@@ -74,7 +72,7 @@ typedef struct {
                  DLT_HTYP_UEH}; /**< This parameter contains several informations, see definitions below */
     uint8_t mcnt;               /**< The message counter is increased with each sent DLT message */
     uint16_t len;               /**< Length of the complete message, without storage header */
-} DLT_PACKED DltStandardHeader;
+} __attribute__((packed)) DltStandardHeader;
 
 /**
  * The structure of the DLT extra header parameters. Each parameter is sent only if enabled in htyp.
@@ -83,7 +81,7 @@ typedef struct {
     char ecu[DLT_ID_SIZE]{'E', 'C', 'U', '1'}; /**< ECU id */
     uint32_t seid{};                           /**< Session number */
     uint32_t tmsp;                             /**< Timestamp since system start in 0.1 milliseconds */
-} DLT_PACKED DltStandardHeaderExtra;
+} __attribute__((packed)) DltStandardHeaderExtra;
 
 /**
  * The structure of the DLT extended header. This header is only sent if enabled in htyp parameter.
@@ -93,8 +91,7 @@ typedef struct {
     uint8_t noar;                                                        /**< number of arguments */
     char apid[DLT_ID_SIZE];                                              /**< application id */
     char ctid[DLT_ID_SIZE];                                              /**< context id */
-} DLT_PACKED DltExtendedHeader;
-#pragma pack(0)
+} __attribute__((packed)) DltExtendedHeader;
 
 template <typename Type>
 class span {
