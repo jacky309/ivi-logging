@@ -270,26 +270,42 @@ class DltCppLogData : public ::logging::LogData {
         return not m_isFull;
     }
 
+    template <typename Type>
+    Type* reserve() {
+        auto v = reinterpret_cast<Type*>(m_content.data() + m_contentSize);
+        m_contentSize += sizeof(Type);
+        return v;
+    }
+
     template <typename... Args>
     void writeFormatted(char const* format, Args... args) {
-        if (checkOverflow(sizeof(DltStringLengthType) + sizeof(DltTypeInfo))) {
-            writeType(DLT_TYPE_INFO_STRG | DLT_SCOD_UTF8);
-            auto actualSize = reinterpret_cast<DltStringLengthType*>(m_content.data() + m_contentSize);
-            m_contentSize += sizeof(DltStringLengthType);
 
-            auto const maxLength = maxContentSize - m_contentSize;
+        auto const spaceForStringContent = getAvailableSpace(sizeof(DltStringLengthType) + sizeof(DltTypeInfo) + 1);
+
+        bool overflow = true;
+
+        if (spaceForStringContent > 0) {
+            writeType(DLT_TYPE_INFO_STRG | DLT_SCOD_UTF8);
+
+            auto size = reserve<DltStringLengthType>();
 
 #pragma GCC diagnostic push
             // Make sure GCC does not complain about not being able to check the format string since it is no literal string
 #pragma GCC diagnostic ignored "-Wformat-security"
-            auto const stringSize = snprintf(m_content.data() + m_contentSize, maxLength, format, args...);
-            *actualSize = stringSize + 1;
-
+            auto const stringSize = static_cast<size_t>(snprintf(m_content.data() + m_contentSize, spaceForStringContent, format, args...));
 #pragma GCC diagnostic pop
 
-            if (checkOverflow(*actualSize + 1)) {
-                m_contentSize += *actualSize;
-            }
+            // snprintf return value does not include the size for the null termination
+            auto const stringSizeInBuffer = std::min(stringSize + 1, spaceForStringContent);
+
+            *size = stringSizeInBuffer;
+            m_contentSize += stringSizeInBuffer;
+            overflow = (spaceForStringContent < stringSize);
+        }
+
+        if (overflow) {
+            // No space left for the whole string
+            addMessageTooLargeIndication();
         }
     }
 
