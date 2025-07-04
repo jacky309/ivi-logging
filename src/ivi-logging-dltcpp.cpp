@@ -1,5 +1,6 @@
 #include "ivi-logging-dltcpp.h"
 
+#include <poll.h>
 #include <sys/stat.h>
 #include <thread>
 #include <vector>
@@ -89,6 +90,10 @@ uint32_t dlt_uptime(void) {
         return (uint32_t)ts.tv_sec * 10000 + (uint32_t)ts.tv_nsec / 100000; /* in 0.1 ms = 100 us */
     else
         return 0;
+}
+
+DaemonConnection::DaemonConnection() {
+    pipe(m_stopPipe);
 }
 
 DaemonConnection& DaemonConnection::getInstance() {
@@ -189,7 +194,7 @@ void DaemonConnection::initDaemonConnection() {
 
             char descriptionWithPID[1024];
             uint32_t const descriptionLength =
-                snprintf(descriptionWithPID, sizeof(descriptionWithPID), "PID:%i / %s", pid, s_pAppLogContext->m_description.c_str());
+                snprintf(descriptionWithPID, sizeof(descriptionWithPID), "%s / PID:%i", s_pAppLogContext->m_description.c_str(), pid);
 
             DltUserHeader userHeader{.message = MessageType::RegisterApp};
             DltUserControlMsgRegisterApplication registerMesssage{.pid = pid, .description_length = descriptionLength};
@@ -244,34 +249,47 @@ void DaemonConnection::send(Types const&... values) {
 }
 
 void DaemonConnection::handleIncomingMessage() {
-    std::array<char, 1024> buffer;
-    int const byteCount = read(m_appFileDescriptor, buffer.data(), buffer.size());
-    if (byteCount != -1) {
-        IVILOGGING_DLT_DEBUG_TRACE("received \n%s", binaryToHex(buffer.data(), byteCount));
 
-        auto pMessage = buffer.data();
+    std::array<struct pollfd, 2> pfds{};
+    pfds[0].fd = m_appFileDescriptor;
+    pfds[0].events = POLLIN | POLLHUP | POLLNVAL | POLLERR | POLLRDHUP;
+    pfds[1].fd = m_stopPipe[0];
+    pfds[1].events = POLLIN | POLLHUP | POLLNVAL | POLLERR | POLLRDHUP;
 
-        while (buffer.data() + byteCount > pMessage + sizeof(DltUserHeader)) {
-            auto const userHeader = reinterpret_cast<DltUserHeader const*>(pMessage);
-            pMessage += sizeof(DltUserHeader);
+    auto i = poll(pfds.data(), pfds.size(), -1);
 
-            switch (userHeader->message) {
-                case MessageType::DLT_USER_MESSAGE_LOG_STATE: {
-                    auto const logStateMsg [[maybe_unused]] = reinterpret_cast<DltUserControlMsgLogState const*>(pMessage);
-                    pMessage += sizeof(DltUserControlMsgLogState);
-                    IVILOGGING_DLT_DEBUG_INCOMING("received DltUserControlMsgLogState");
-                } break;
+    if (i > 0) {
+        if (pfds[0].revents == POLLIN) {
+            std::array<char, 1024> buffer;
+            int const byteCount = read(m_appFileDescriptor, buffer.data(), buffer.size());
+            if (byteCount != -1) {
+                IVILOGGING_DLT_DEBUG_TRACE("received \n%s", binaryToHex(buffer.data(), byteCount));
 
-                case MessageType::DLT_USER_MESSAGE_LOG_LEVEL: {
-                    auto const logLevelMsg = reinterpret_cast<DltUserControlMsgLogLevel const*>(pMessage);
-                    pMessage += sizeof(DltUserControlMsgLogLevel);
-                    IVILOGGING_DLT_DEBUG_INCOMING("received DltUserControlMsgLogLevel %d pos:%d", logLevelMsg->log_level, logLevelMsg->log_level_pos);
-                    applyLogLevel(*logLevelMsg);
-                } break;
+                auto pMessage = buffer.data();
 
-                default: {
-                    return;
-                } break;
+                while (buffer.data() + byteCount > pMessage + sizeof(DltUserHeader)) {
+                    auto const userHeader = reinterpret_cast<DltUserHeader const*>(pMessage);
+                    pMessage += sizeof(DltUserHeader);
+
+                    switch (userHeader->message) {
+                        case MessageType::DLT_USER_MESSAGE_LOG_STATE: {
+                            auto const logStateMsg [[maybe_unused]] = reinterpret_cast<DltUserControlMsgLogState const*>(pMessage);
+                            pMessage += sizeof(DltUserControlMsgLogState);
+                            IVILOGGING_DLT_DEBUG_INCOMING("received DltUserControlMsgLogState");
+                        } break;
+
+                        case MessageType::DLT_USER_MESSAGE_LOG_LEVEL: {
+                            auto const logLevelMsg = reinterpret_cast<DltUserControlMsgLogLevel const*>(pMessage);
+                            pMessage += sizeof(DltUserControlMsgLogLevel);
+                            IVILOGGING_DLT_DEBUG_INCOMING("received DltUserControlMsgLogLevel %d pos:%d", logLevelMsg->log_level, logLevelMsg->log_level_pos);
+                            applyLogLevel(*logLevelMsg);
+                        } break;
+
+                        default: {
+                            return;
+                        } break;
+                    }
+                }
             }
         }
     }
@@ -332,7 +350,6 @@ void DaemonConnection::init() {
         readerThread = std::thread([this]() {
             while (not m_stopRequested) {
                 handleIncomingMessage();
-                sleep(1);
             };
         });
     }
@@ -340,12 +357,26 @@ void DaemonConnection::init() {
 
 DaemonConnection::~DaemonConnection() {
     m_stopRequested = true;
+    write(m_stopPipe[1], &m_stopRequested, sizeof(m_stopRequested));
     readerThread.join();
 }
 
 void DltCppContextClass::setActiveLogLevel(DltLogLevelType activeLogLevel) {
     m_activeLogLevel = activeLogLevel;
     IVILOGGING_DLT_DEBUG_TRACE("Log level for context: %s set to %d", this->m_context->getID(), activeLogLevel);
+}
+
+void DltCppLogData::init(DltCppContextClass& context, LogInfo const& data) {
+    m_data = &data;
+    m_context = &context;
+    m_dltLogLevel = m_context->getDLTLogLevel(getData().getLogLevel());
+    m_enabled = context.isEnabled(getData().getLogLevel());
+
+    m_messageCount = context.messageCounter();
+
+#ifndef NDEBUG
+    m_content.fill(-1);
+#endif
 }
 
 } // namespace logging::dlt

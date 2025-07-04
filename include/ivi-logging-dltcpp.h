@@ -92,6 +92,8 @@ class DaemonConnection {
   public:
     static DaemonConnection& getInstance();
 
+    DaemonConnection();
+
     ~DaemonConnection();
 
     void initDaemonConnection();
@@ -124,6 +126,8 @@ class DaemonConnection {
     int m_appFileDescriptor;
     bool m_initialized{false};
     bool m_stopRequested{false};
+
+    int m_stopPipe[2];
 };
 
 class DltCppContextClass : public LogContextBase {
@@ -215,18 +219,7 @@ class DltCppLogData : public ::logging::LogData {
     DltCppLogData() {
     }
 
-    void init(DltCppContextClass& context, LogInfo const& data) {
-        m_data = &data;
-        m_context = &context;
-        m_dltLogLevel = m_context->getDLTLogLevel(getData().getLogLevel());
-        m_enabled = context.isEnabled(getData().getLogLevel());
-
-        m_messageCount = context.messageCounter();
-
-#ifndef NDEBUG
-        m_content.fill(-1);
-#endif
-    }
+    void init(DltCppContextClass& context, LogInfo const& data);
 
     virtual ~DltCppLogData();
 

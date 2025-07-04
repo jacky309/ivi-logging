@@ -95,7 +95,7 @@ void myFunction() {
 
     log_with_context(getDefaultContext(), logging::LogLevel::Info) << std::hex << i << std::endl;
 
-    size_t dd = 0x123456789986754;
+    auto dd = 0x123456789;
     log_info() << dd;
     log_info() << std::hex << dd;
 
