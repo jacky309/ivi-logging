@@ -90,7 +90,7 @@ class DltContextClass : public LogContextBase, private DltContext {
 
         pid_t pid = getpid();
         char descriptionWithPID[1024];
-        snprintf(descriptionWithPID, sizeof(descriptionWithPID), "PID:%i / %s", pid, description);
+        snprintf(descriptionWithPID, sizeof(descriptionWithPID), "%s / PID:%i", description, pid);
 
         auto dltCode = dlt_register_app(id, descriptionWithPID);
 

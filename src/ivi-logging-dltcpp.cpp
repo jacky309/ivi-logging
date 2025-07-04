@@ -338,6 +338,11 @@ void DaemonConnection::init() {
     }
 }
 
+DaemonConnection::~DaemonConnection() {
+    m_stopRequested = true;
+    readerThread.join();
+}
+
 void DltCppContextClass::setActiveLogLevel(DltLogLevelType activeLogLevel) {
     m_activeLogLevel = activeLogLevel;
     IVILOGGING_DLT_DEBUG_TRACE("Log level for context: %s set to %d", this->m_context->getID(), activeLogLevel);

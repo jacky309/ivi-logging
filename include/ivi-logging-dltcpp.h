@@ -92,10 +92,7 @@ class DaemonConnection {
   public:
     static DaemonConnection& getInstance();
 
-    ~DaemonConnection() {
-        m_stopRequested = true;
-        readerThread.join();
-    }
+    ~DaemonConnection();
 
     void initDaemonConnection();
 
