@@ -187,7 +187,7 @@ void DaemonConnection::initDaemonConnection() {
 
     if (not isDaemonConnected()) {
         /* open DLT output FIFO */
-        m_daemonFileDescriptor = open(dlt_daemon_fifo, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+        m_daemonFileDescriptor = open(dlt_daemon_fifo, O_WRONLY | O_CLOEXEC);
 
         if (isDaemonConnected()) {
             printf("Connection to the DLT daemon established\n");
@@ -244,6 +244,8 @@ void DaemonConnection::send(Types const&... values) {
 
     [[maybe_unused]] auto const bytes_written = writev(m_daemonFileDescriptor, buffers.data(), buffers.size());
     if (bytes_written < 0) {
+        printf("Could not write data to DLT daemon socket\n");
+        close(m_daemonFileDescriptor);
         m_daemonFileDescriptor = disconnectedFromDaemonFd;
     }
 }
