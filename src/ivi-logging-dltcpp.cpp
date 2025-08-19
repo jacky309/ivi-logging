@@ -1,6 +1,7 @@
 #include "ivi-logging-dltcpp.h"
 
 #include <poll.h>
+#include <signal.h>
 #include <sys/stat.h>
 #include <thread>
 #include <vector>
@@ -350,6 +351,12 @@ void DaemonConnection::init() {
         m_initialized = true;
 
         readerThread = std::thread([this]() {
+            // Ensure that our thread does not catch any signal
+            sigset_t signal_mask{};
+            sigfillset(&signal_mask);
+            auto rc = pthread_sigmask(SIG_BLOCK, &signal_mask, NULL);
+            assert(rc == 0);
+
             while (not m_stopRequested) {
                 handleIncomingMessage();
             };
