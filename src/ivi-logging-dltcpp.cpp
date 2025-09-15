@@ -3,6 +3,7 @@
 #include <poll.h>
 #include <signal.h>
 #include <sys/stat.h>
+#include <pthread.h>
 #include <thread>
 #include <vector>
 
@@ -351,6 +352,8 @@ void DaemonConnection::init() {
         m_initialized = true;
 
         readerThread = std::thread([this]() {
+            pthread_setname_np(pthread_self(), "DLT_Input");
+
             // Ensure that our thread does not catch any signal
             sigset_t signal_mask{};
             sigfillset(&signal_mask);
