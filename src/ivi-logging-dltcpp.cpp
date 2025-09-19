@@ -1,16 +1,14 @@
 #include "ivi-logging-dltcpp.h"
 
 #include <poll.h>
+#include <pthread.h>
 #include <signal.h>
 #include <sys/stat.h>
-#include <pthread.h>
 #include <thread>
 #include <vector>
 
-// #define IVILOGGING_DLT_DEBUG_INCOMINGDEBUG_IPC_TRACE(format, ...) printf("" format "\n", ##__VA_ARGS__)
 // #define IVILOGGING_DLT_DEBUG_INCOMING(format, ...) printf("%s:%d %s     " format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 #define IVILOGGING_DLT_DEBUG_INCOMING(format, ...)
-// #define IVILOGGING_DLT_DEBUG_TRACE(format, ...) printf("IVI: %s:%d %s" format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 // #define IVILOGGING_DLT_DEBUG_TRACE(format, ...) printf("IVI: %s:%d %s" format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 #define IVILOGGING_DLT_DEBUG_TRACE(format, ...)
 // #define IVILOGGING_DLT_DEBUG_IPC_TRACE(format, ...) printf(format "\n", ##__VA_ARGS__)

@@ -116,6 +116,8 @@ int generateDataForLogging() {
 
 int main(int, char const**) {
 
+    log_debug_with_context(logging::getNullContext()) << std::hex << "This log should not never be seen";
+
     log_debug().writeFormatted("This log is using a format string, similar to the printf syntax. This is an int : %i", 345);
     log_error().writeFormatted("Another way to use the printf variant %i", 7345).writeFormatted(". Done");
 

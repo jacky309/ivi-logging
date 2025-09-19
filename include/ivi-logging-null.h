@@ -38,12 +38,22 @@ class NullLogContext {
     void setParentContext([[maybe_unused]] LogContextCommon& context) {
     }
 
-    bool isEnabled([[maybe_unused]] LogLevel logLevel) {
+    bool isEnabled([[maybe_unused]] LogLevel logLevel) const {
         return false;
     }
 
     void registerContext() {
     }
 };
+
+/**
+ * @brief Returns a context which can be used to disable the logging
+ *
+ * @return the context
+ */
+inline auto& getNullContext() {
+    static LogContextT<TypeSet<NullLogContext>, TypeSet<NullLogContext::LogDataType>> context{"NULL", ""};
+    return context;
+}
 
 } // namespace logging
