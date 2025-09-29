@@ -406,8 +406,9 @@ class DltCppLogData : public ::logging::LogData {
     }
 
   private:
-    static constexpr size_t maxContentSize = 2048 - sizeof(MessageTooLargeData);
-    std::array<char, maxContentSize + sizeof(MessageTooLargeData)> m_content;
+    static constexpr size_t maxMessageSize = 16384; // Maximum size of a log
+    static constexpr size_t maxContentSize = maxMessageSize - sizeof(MessageTooLargeData);
+    std::array<char, maxMessageSize> m_content;
 
     size_t m_contentSize{0};
 
