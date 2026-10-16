@@ -295,6 +295,14 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
                 m_logData.write(m_unsupportedText);
             }
 
+            /**
+             * Used to support std::endl, std::ends, etc...
+             */
+            LogNoFail& operator<<(LogEntry& (*functionPtr)(LogEntry&)) {
+                m_logData << functionPtr;
+                return *this;
+            }
+
             LogEntry& m_logData;
             std::string_view m_unsupportedText;
         };
