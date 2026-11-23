@@ -52,7 +52,7 @@ class NullLogContext {
  * @return the context
  */
 inline auto& getNullContext() {
-    static LogContextT<TypeSet<NullLogContext>, TypeSet<NullLogContext::LogDataType>> context{"NULL", ""};
+    static LogContextT<NullLogContext> context{"NULL", ""};
     return context;
 }
 

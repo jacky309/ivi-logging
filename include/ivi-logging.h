@@ -195,50 +195,41 @@ class StringBuilder {
 
 #endif
 
-template <typename... Types>
-struct TypeSet {};
-
-template <class, class>
-class LogContextT;
-
 struct LogNoFailBase {};
 
 template <typename Type>
 using enable_if_logging_type = std::enable_if_t<
     std::is_base_of_v<logging::LogData, std::remove_reference_t<Type>> or std::is_base_of_v<logging::LogNoFailBase, std::remove_reference_t<Type>>, Type&>;
 
-template <template <class...> class ContextTypesClass, class... ContextTypes, template <class...> class ContextDataTypesClass, class... LogDataTypes>
-class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>> : public LogContextCommon {
+template <typename... ContextTypes>
+class LogContextT : public LogContextCommon {
 
   public:
+    using LogDataTypesTuple = std::tuple<typename ContextTypes::LogDataType...>;
+
     /**
      * Use that typedef to extend a LogContext type by adding a backend to it.
      */
-    template <typename ExtraContextType, typename ExtraDataType>
-    using Extension =
-        typename LogContextT<ContextTypesClass<ContextTypes..., ExtraContextType>, ContextDataTypesClass<LogDataTypes..., ExtraDataType>>::LogContextT;
+    template <typename ExtraContextType>
+    using Extension = LogContextT<ContextTypes..., ExtraContextType>::LogContextT;
 
     class LogEntry : public LogData, public LogInfo {
 
         template <size_t I = 0, typename... CallArgumentTypes>
-        typename std::enable_if<I == sizeof...(ContextTypes)>::type
-        for_each_init([[maybe_unused]] std::tuple<LogDataTypes...>& tpl,
-                      [[maybe_unused]] LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>>& context,
-                      [[maybe_unused]] CallArgumentTypes&... args) {
+        typename std::enable_if<I == sizeof...(ContextTypes)>::type for_each_init([[maybe_unused]] LogDataTypesTuple& tpl,
+                                                                                  [[maybe_unused]] LogContextT<ContextTypes...>& context,
+                                                                                  [[maybe_unused]] CallArgumentTypes&... args) {
         }
 
         template <size_t I = 0, typename... CallArgumentTypes>
             typename std::enable_if <
-            I<sizeof...(ContextTypes)>::type for_each_init(std::tuple<LogDataTypes...>& tpl,
-                                                           LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>>& context,
-                                                           CallArgumentTypes&... args) {
+            I<sizeof...(ContextTypes)>::type for_each_init(LogDataTypesTuple& tpl, LogContextT<ContextTypes...>& context, CallArgumentTypes&... args) {
             std::get<I>(tpl).init(std::get<I>(context.m_contexts), args...);
             for_each_init<I + 1>(tpl, context, args...);
         }
 
       public:
-        LogEntry(LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>>& context, LogLevel level, char const* fileName,
-                 int lineNumber, char const* prettyFunction)
+        LogEntry(LogContextT<ContextTypes...>& context, LogLevel level, char const* fileName, int lineNumber, char const* prettyFunction)
             : LogInfo(level, fileName, lineNumber, prettyFunction), m_context(context) {
             for_each_init(m_contexts, context, *this);
         }
@@ -323,8 +314,8 @@ class LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogD
         }
 
       private:
-        std::tuple<LogDataTypes...> m_contexts;
-        LogContextT<ContextTypesClass<ContextTypes...>, ContextDataTypesClass<LogDataTypes...>>& m_context;
+        LogDataTypesTuple m_contexts;
+        LogContextT<ContextTypes...>& m_context;
 
         LogNoFail m_protectedLogData{*this};
     };
@@ -391,7 +382,7 @@ operator<<(LogType&& log, ValueType const&) {
 /**
  * Use this context definition to completely disable the logging
  */
-typedef LogContextT<TypeSet<>, TypeSet<>> NoLoggingLogContext;
+typedef LogContextT<> NoLoggingLogContext;
 
 } // namespace logging
 
