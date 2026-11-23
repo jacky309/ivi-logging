@@ -211,7 +211,7 @@ class LogContextT : public LogContextCommon {
      * Use that typedef to extend a LogContext type by adding a backend to it.
      */
     template <typename ExtraContextType>
-    using Extension = LogContextT<ContextTypes..., ExtraContextType>::LogContextT;
+    using Extension = LogContextT<ContextTypes..., ExtraContextType>;
 
     class LogEntry : public LogData, public LogInfo {
 
@@ -231,7 +231,7 @@ class LogContextT : public LogContextCommon {
       public:
         LogEntry(LogContextT<ContextTypes...>& context, LogLevel level, char const* fileName, int lineNumber, char const* prettyFunction)
             : LogInfo(level, fileName, lineNumber, prettyFunction), m_context(context) {
-            for_each_init(m_contexts, context, *this);
+            for_each_init(m_data, context, *this);
         }
 
         ~LogEntry() {
@@ -245,7 +245,7 @@ class LogContextT : public LogContextCommon {
 
         template <typename... Args>
         LogEntry& write(Args const&... args) {
-            for_each_in_tuple_(m_contexts, [&](auto& log) {
+            for_each_in_tuple_(m_data, [&](auto& log) {
                 if (log.isEnabled()) // We need to check each context here to ensure that we don't send data to a disabled context
                     for_each_argument(
                         [&](auto&& arg) {
@@ -258,7 +258,7 @@ class LogContextT : public LogContextCommon {
 
         template <typename... Args>
         LogEntry& writeFormatted(char const* format, Args... args) {
-            for_each_in_tuple_(m_contexts, [&](auto& log) {
+            for_each_in_tuple_(m_data, [&](auto& log) {
                 if (log.isEnabled()) // We need to check each context here to ensure that we don't send data to a disabled context
                     log.writeFormatted(format, args...);
             });
@@ -314,7 +314,7 @@ class LogContextT : public LogContextCommon {
         }
 
       private:
-        LogDataTypesTuple m_contexts;
+        LogDataTypesTuple m_data;
         LogContextT<ContextTypes...>& m_context;
 
         LogNoFail m_protectedLogData{*this};
