@@ -41,24 +41,13 @@ if (ENABLE_DLT_BACKEND OR ENABLE_DLTCPP_BACKEND)
     endif()
 endif()
 
-foreach(CLASS ${BACKEND_CLASSES})
-    list(APPEND BACKEND_DATA_TYPE_CLASSES_DLT_ONLY "${CLASS}::LogDataType" )
-endforeach()
-string(JOIN ", " LOG_CONTEXTS_DLT_ONLY ${BACKEND_CLASSES_DLT_ONLY})
-string(JOIN ", " LOG_CONTEXTS_LOG_DATA_TYPES_DLT_ONLY ${BACKEND_DATA_TYPE_CLASSES_DLT_ONLY})
-
+string(JOIN ", " LOG_CONTEXTS_DLT_ONLY ${BACKEND_CLASSES})
 
 if (ENABLE_CONSOLE_BACKEND)
     list(APPEND BACKEND_CLASSES ConsoleLogContext)
 endif()
 
 string(JOIN ", " LOG_CONTEXTS ${BACKEND_CLASSES})
-
-foreach(CLASS ${BACKEND_CLASSES})
-    list(APPEND BACKEND_DATA_TYPE_CLASSES "${CLASS}::LogDataType" )
-endforeach()
-string(JOIN ", " LOG_CONTEXTS ${BACKEND_CLASSES})
-string(JOIN ", " LOG_CONTEXTS_LOG_DATA_TYPES ${BACKEND_DATA_TYPE_CLASSES})
 
 configure_file(cmake/dependencies.cmake.in dependencies.cmake @ONLY)
 include(${CMAKE_CURRENT_BINARY_DIR}/dependencies.cmake)

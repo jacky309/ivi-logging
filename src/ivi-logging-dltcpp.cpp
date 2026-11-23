@@ -8,6 +8,7 @@
 #include <sys/uio.h>
 #include <thread>
 #include <vector>
+#include <mutex>
 
 // #define IVILOGGING_DLT_DEBUG_INCOMING(format, ...) printf("%s:%d %s     " format "\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 #define IVILOGGING_DLT_DEBUG_INCOMING(format, ...)
